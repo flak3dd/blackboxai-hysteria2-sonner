@@ -2,6 +2,7 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { readSession } from "@/lib/auth/session"
 import { SignOutButton } from "@/components/admin/sign-out-button"
+import { AdminNav } from "@/components/admin/nav"
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await readSession()
@@ -15,11 +16,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/admin" className="text-sm font-semibold">
             Hysteria 2 Panel
           </Link>
-          <nav className="flex items-center gap-4 text-sm text-muted-foreground">
-            <Link href="/admin" className="hover:text-foreground">
-              Overview
-            </Link>
-          </nav>
+          <AdminNav />
         </div>
         <div className="flex items-center gap-3 text-sm">
           <span className="text-muted-foreground">{session.email ?? session.uid}</span>

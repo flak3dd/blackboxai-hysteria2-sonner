@@ -12,24 +12,28 @@ export default function AdminOverviewPage() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle>Server</CardTitle>
-            <CardDescription>Binary lifecycle + config</CardDescription>
+            <CardTitle>Agents</CardTitle>
+            <CardDescription>LLM-driven tasks via Hysteria egress</CardDescription>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">Coming in Phase 2.</CardContent>
+          <CardContent className="text-sm text-muted-foreground">
+            <a href="/admin/agents" className="underline-offset-2 hover:underline">
+              Open agents →
+            </a>
+          </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Users &amp; Nodes</CardTitle>
-            <CardDescription>Client auth tokens, node registry</CardDescription>
+            <CardTitle>Server</CardTitle>
+            <CardDescription>Binary lifecycle + config</CardDescription>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">Coming in Phase 2.</CardContent>
+          <CardContent className="text-sm text-muted-foreground">Coming in Phase 3.</CardContent>
         </Card>
         <Card>
           <CardHeader>
             <CardTitle>Mail</CardTitle>
             <CardDescription>IMAP / POP3 account testing</CardDescription>
           </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">Coming in Phase 3.</CardContent>
+          <CardContent className="text-sm text-muted-foreground">Coming in Phase 4.</CardContent>
         </Card>
       </div>
     </div>

@@ -34,6 +34,25 @@ const ServerEnvSchema = z.object({
     .min(60)
     .max(60 * 60 * 24 * 14)
     .default(60 * 60 * 24 * 5),
+
+  HYSTERIA_EGRESS_PROXY_URL: z
+    .string()
+    .regex(/^(https?|socks5h?):\/\/.+/, "must be http(s):// or socks5(h):// URL")
+    .optional(),
+
+  LLM_PROVIDER_BASE_URL: z.string().url().default("https://api.openai.com/v1"),
+  LLM_PROVIDER_API_KEY: z.string().min(1).optional(),
+  LLM_MODEL: z.string().min(1).default("gpt-4o-mini"),
+  LLM_TEMPERATURE: z.coerce.number().min(0).max(2).default(0.2),
+
+  AGENT_MAX_STEPS: z.coerce.number().int().min(1).max(100).default(20),
+  AGENT_MAX_CONCURRENCY_PER_DOMAIN: z.coerce.number().int().min(1).max(32).default(2),
+  AGENT_TASK_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(1000)
+    .max(30 * 60 * 1000)
+    .default(5 * 60 * 1000),
 })
 
 export type ServerEnv = z.infer<typeof ServerEnvSchema>
