@@ -571,4 +571,4 @@ safely retire beacons {{BeaconID1}}, {{BeaconID2}}.
 
 ---
 
-*End of guide. For troubleshooting, see `INSTALL.md` and `QUICKSTART.md`.*
+*End of guide. For troubleshooting, see `docs/INSTALL.md` and `docs/QUICKSTART.md`.*

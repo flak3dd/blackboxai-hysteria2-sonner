@@ -96,7 +96,7 @@
 | Category | Files |
 |---|---|
 | Config | `.env.example`, `next.config.js`, `postcss.config.mjs`, `tailwind.config.ts`, `tsconfig.json`, `jest.config.js`, `eslint.config.mjs` |
-| Scripts | `scripts/fix-node-deployment.md`, `scripts/reset-ai-providers.js`, `scripts/run-prisma.js`, `scripts/setup-admin.js`, `scripts/setup.bat`, `scripts/setup.sh`, `scripts/test-ai-assistant.ts`, `scripts/test-azure-deployment.ts`, `scripts/test-azure.ts` |
+| Scripts | `docs/guides/fix-node-deployment.md`, `scripts/reset-ai-providers.js`, `scripts/run-prisma.js`, `scripts/setup-admin.js`, `scripts/setup.bat`, `scripts/setup.sh`, `scripts/test-ai-assistant.ts`, `scripts/test-azure-deployment.ts`, `scripts/test-azure.ts` |
 | Prisma | `prisma/schema.prisma`, `prisma/supabase-realtime.sql` |
 
 ### 1.5 Tests (`tests/`)
@@ -131,9 +131,9 @@
 | `lib/api/fetch-optimized.ts` | - | Never imported anywhere |
 | `lib/net/fetch.ts` | - | Never imported anywhere (only `net/dispatcher.ts` uses `net/strategy.ts`) |
 | `lib/infrastructure/domain-fronting.ts` | - | Never imported |
-| `lib/infrastructure/proxy-rotation.ts` | - | Never imported (only referenced in `INTEGRATION_PLAN.md`) |
+| `lib/infrastructure/proxy-rotation.ts` | - | Never imported (only referenced in `docs/integration/INTEGRATION_PLAN.md`) |
 | `lib/infrastructure/monitoring.ts` | - | Never imported |
-| `lib/ai/startup.ts` | - | Only referenced in `INTEGRATION_PLAN.md`, never imported in code |
+| `lib/ai/startup.ts` | - | Only referenced in `docs/integration/INTEGRATION_PLAN.md`, never imported in code |
 | `lib/implants/` | All 3 files | Only used in tests/manual scripts, never in app routes/components |
 | `lib/post-exploitation/` | All 26 files | Only imported in tests (`tests/ai/agent-coordinator.test.ts`), never in app |
 | `lib/c2/` | All 3 files | Only self-referencing imports within the module; not used by app |

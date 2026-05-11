@@ -162,7 +162,7 @@ echo   2. Start the development server: npm run dev
 echo   3. Open http://localhost:3000/login in your browser
 echo   4. Login with admin credentials
 echo.
-echo For detailed installation instructions, see INSTALL.md
+echo For detailed installation instructions, see docs/INSTALL.md
 echo.
 
 pause

@@ -17,7 +17,7 @@ This test suite validates every critical stage of real red-team operations befor
 - ShadowGrok tests (database required)
 - OPSEC workflow tests (database required)
 
-See <ref_file file="/Users/adminuser/vsc/blackboxai-hysteria2-sonner-1/tests/DATABASE_SETUP.md" /> for database setup instructions.
+See <ref_file file="/Users/adminuser/vsc/blackboxai-hysteria2-sonner-1/docs/testing/DATABASE_SETUP.md" /> for database setup instructions.
 
 ## Quick Start
 

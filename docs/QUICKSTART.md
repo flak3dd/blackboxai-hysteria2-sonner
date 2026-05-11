@@ -144,11 +144,11 @@ npm run prisma:generate
 2. **Enable Features**: Add API keys for AI and threat intelligence features
 3. **Set Up Hysteria 2**: Configure Hysteria 2 integration if managing nodes
 4. **Explore Dashboard**: Navigate through the admin panel features
-5. **Read Documentation**: Check [INSTALL.md](./INSTALL.md) for detailed setup
+5. **Read Documentation**: Check [docs/INSTALL.md](./docs/INSTALL.md) for detailed setup
 
 ## Support
 
-- **Documentation**: See [INSTALL.md](./INSTALL.md) for detailed instructions
+- **Documentation**: See [docs/INSTALL.md](./docs/INSTALL.md) for detailed instructions
 - **Issues**: Report bugs on GitHub Issues
 - **Tests**: Run `npm test` to verify installation
 
@@ -175,7 +175,7 @@ npm run prisma:push    # Push schema to database
 
 ## Production Deployment
 
-For production deployment, see [INSTALL.md](./INSTALL.md) - Production Deployment section.
+For production deployment, see [docs/INSTALL.md](./docs/INSTALL.md) - Production Deployment section.
 
 Key production considerations:
 - Set strong admin passwords

@@ -186,7 +186,7 @@ print_completion() {
     echo "  3. Open http://localhost:3000/login in your browser"
     echo "  4. Login with admin credentials"
     echo ""
-    print_info "For detailed installation instructions, see INSTALL.md"
+    print_info "For detailed installation instructions, see docs/INSTALL.md"
     echo ""
 }
 

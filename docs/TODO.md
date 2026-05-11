@@ -4,7 +4,7 @@
 This document tracks pending tasks and future improvements for the Hysteria 2 Admin Panel project.
 
 ## Completed Tasks
-- ✅ Phase 2 Implementation: OSINT Domain Enumeration and Threat Intelligence (see docs/PHASE2_IMPLEMENTATION_SUMMARY.md)
+- ✅ Phase 2 Implementation: OSINT Domain Enumeration and Threat Intelligence (see docs/reports/PHASE2_IMPLEMENTATION_SUMMARY.md)
 - ✅ AI Workflow Assistant enhancements
 - ✅ Config Audit, Universal Settings, Provider Keys UI
 - ✅ Docker support and deployment scripts
@@ -33,7 +33,7 @@ This document tracks pending tasks and future improvements for the Hysteria 2 Ad
 
 ## Notes
 - See docs/features/FEATURE_ROADMAP.md for comprehensive implementation roadmap
-- See docs/PHASE2_IMPLEMENTATION_SUMMARY.md for details on completed reconnaissance features
+- See docs/reports/PHASE2_IMPLEMENTATION_SUMMARY.md for details on completed reconnaissance features
 - See docs/architecture/INFRASTRUCTURE_ARCHITECTURE.md for system architecture documentation
 
 ---
