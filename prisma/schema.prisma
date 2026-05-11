@@ -304,9 +304,12 @@ model PayloadBuild {
   id              String   @id @default(cuid())
   name            String
   type            String
+  platform        String?
   description     String?
   status          String   @default("pending")
   config          Json
+  obfuscationLevel Int     @default(1)
+  packingMethod   String?
   downloadUrl     String?
   sizeBytes       BigInt?
   buildLogs       Json     @default("[]")
@@ -321,6 +324,7 @@ model PayloadBuild {
 
   @@index([status, createdAt(sort: Desc)])
   @@index([createdBy])
+  @@index([platform])
   @@map("payload_builds")
 }
 
@@ -1135,4 +1139,65 @@ model BloodHoundEdge {
   @@index([targetId])
   @@index([edgeType])
   @@map("bloodhound_edges")
+}
+
+model Campaign {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  status      String   @default("planning")
+  leadOperatorId String?
+  targetCount Int      @default(0)
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status])
+  @@index([leadOperatorId])
+  @@map("campaigns")
+}
+
+model CampaignAssignment {
+  id          String   @id @default(cuid())
+  campaignId  String
+  operatorId  String
+  role        String   @default("operator")
+  assignedAt  DateTime @default(now())
+
+  @@unique([campaignId, operatorId])
+  @@index([campaignId])
+  @@index([operatorId])
+  @@map("campaign_assignments")
+}
+
+model TrafficStats {
+  id          String   @id @default(cuid())
+  nodeId      String
+  userId      String?
+  bytesIn     BigInt   @default(0)
+  bytesOut    BigInt   @default(0)
+  connections Int      @default(0)
+  recordedAt  DateTime @default(now())
+
+  @@index([nodeId, recordedAt(sort: Desc)])
+  @@index([userId, recordedAt(sort: Desc)])
+  @@index([recordedAt(sort: Desc)])
+  @@map("traffic_stats")
+}
+
+model Report {
+  id          String   @id @default(cuid())
+  campaignId  String?
+  type        String
+  title       String
+  content     String   @db.Text
+  format      String   @default("pdf")
+  generatedBy String
+  createdAt   DateTime @default(now())
+
+  @@index([campaignId])
+  @@index([generatedBy])
+  @@index([type])
+  @@map("reports")
 }
