@@ -20,7 +20,7 @@ function getEgressManager(): EgressManager {
   return egressManager
 }
 
-// GET /api/admin/infrastructure/egress - List all egress nodes
+// GET /api/admin/operations/infrastructure/egress - List all egress nodes
 export async function GET(request: NextRequest) {
   try {
     await verifyAdmin(request)
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/admin/infrastructure/egress - Add new egress node
+// POST /api/admin/operations/infrastructure/egress - Add new egress node
 export async function POST(request: NextRequest) {
   try {
     await verifyAdmin(request)
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT /api/admin/infrastructure/egress - Update egress node configuration
+// PUT /api/admin/operations/infrastructure/egress - Update egress node configuration
 export async function PUT(request: NextRequest) {
   try {
     await verifyAdmin(request)
@@ -117,7 +117,7 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE /api/admin/infrastructure/egress - Remove egress node
+// DELETE /api/admin/operations/infrastructure/egress - Remove egress node
 export async function DELETE(request: NextRequest) {
   try {
     await verifyAdmin(request)

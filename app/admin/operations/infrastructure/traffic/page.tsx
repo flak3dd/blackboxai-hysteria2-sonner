@@ -1,4 +1,4 @@
-import { TrafficDashboard } from "@/components/admin/infrastructure/traffic-dashboard"
+import { TrafficDashboard } from "@/components/admin/operations/infrastructure/traffic-dashboard"
 
 export const dynamic = "force-dynamic"
 

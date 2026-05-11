@@ -61,7 +61,7 @@ export function DeploymentMonitoringView() {
 
   const loadDeployments = async () => {
     try {
-      const res = await fetch("/api/admin/deploy", { cache: "no-store" })
+      const res = await fetch("/api/admin/operations/deploy", { cache: "no-store" })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       setDeployments(data.deployments || [])
@@ -78,7 +78,7 @@ export function DeploymentMonitoringView() {
     if (!confirm("Are you sure you want to destroy this deployment?")) return
 
     try {
-      const res = await fetch(`/api/admin/deploy/${id}/destroy`, { method: "POST" })
+      const res = await fetch(`/api/admin/operations/deploy/${id}/destroy`, { method: "POST" })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       toast.success("Deployment destroyed successfully")
       await loadDeployments()
@@ -98,7 +98,7 @@ export function DeploymentMonitoringView() {
     setStreamingLogs([])
 
     try {
-      const res = await fetch(`/api/admin/deploy/${id}/stream`)
+      const res = await fetch(`/api/admin/operations/deploy/${id}/stream`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
       const reader = res.body?.getReader()

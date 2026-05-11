@@ -1,4 +1,4 @@
-import { MigratorView } from "@/components/admin/mail/migrator-view"
+import { MigratorView } from "@/components/admin/communication/mail/migrator-view"
 
 export const dynamic = "force-dynamic"
 

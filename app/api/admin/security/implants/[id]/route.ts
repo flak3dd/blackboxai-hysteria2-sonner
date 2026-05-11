@@ -6,7 +6,7 @@ import { verifyAdmin, toErrorResponse } from "@/lib/auth/admin"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-// GET /api/admin/implants/[id] - Get a specific implant
+// GET /api/admin/security/implants/[id] - Get a specific implant
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -31,7 +31,7 @@ export async function GET(
   }
 }
 
-// PATCH /api/admin/implants/[id] - Update an implant
+// PATCH /api/admin/security/implants/[id] - Update an implant
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -51,7 +51,7 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/admin/implants/[id] - Delete an implant
+// DELETE /api/admin/security/implants/[id] - Delete an implant
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -70,7 +70,7 @@ export async function DELETE(
   }
 }
 
-// POST /api/admin/implants/[id]/tasks - Send a task to an implant
+// POST /api/admin/security/implants/[id]/tasks - Send a task to an implant
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

@@ -1,4 +1,4 @@
-import { DashboardOverview } from "@/components/admin/dashboard/overview"
+import { DashboardOverview } from "@/components/admin/operations/dashboard/overview"
 
 export const dynamic = "force-dynamic"
 

@@ -3,7 +3,7 @@
  * on a 401 response and retries the original request once.
  *
  * Usage: import { apiFetch } from "@/lib/api/fetch"
- *        const res = await apiFetch("/api/admin/profiles")
+ *        const res = await apiFetch("/api/admin/configuration/profiles")
  */
 
 let refreshPromise: Promise<boolean> | null = null

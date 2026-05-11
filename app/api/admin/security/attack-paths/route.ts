@@ -18,7 +18,7 @@ const DiscoverSchema = z.object({
   targetPrivilege: z.enum(["user", "admin", "system", "domain_admin"]).optional(),
 })
 
-// GET /api/admin/attack-paths?startHostId=xxx&targetPrivilege=domain_admin
+// GET /api/admin/security/attack-paths?startHostId=xxx&targetPrivilege=domain_admin
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     await verifyAdmin(req)
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 }
 
-// POST /api/admin/attack-paths
+// POST /api/admin/security/attack-paths
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     await verifyAdmin(req)

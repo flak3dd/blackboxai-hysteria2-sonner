@@ -1,4 +1,4 @@
-import { ClientConfigsView } from "@/components/admin/configs/configs-view"
+import { ClientConfigsView } from "@/components/admin/configuration/configs/configs-view"
 
 export const dynamic = "force-dynamic"
 

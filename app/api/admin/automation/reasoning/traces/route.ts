@@ -15,7 +15,7 @@ import { metaCognitionEngine } from '@/lib/ai/reasoning/meta-cognition'
 import { cotEngine } from '@/lib/ai/reasoning/chain-of-thought'
 
 /**
- * GET /api/admin/reasoning/traces
+ * GET /api/admin/automation/reasoning/traces
  * List reasoning traces with optional filtering
  */
 export async function GET(request: NextRequest) {
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * DELETE /api/admin/reasoning/traces
+ * DELETE /api/admin/automation/reasoning/traces
  * Clear old traces
  */
 export async function DELETE(request: NextRequest) {

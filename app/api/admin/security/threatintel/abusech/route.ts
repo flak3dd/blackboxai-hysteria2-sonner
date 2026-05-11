@@ -10,7 +10,7 @@ import logger from '@/lib/logger'
 
 const log = logger.child({ module: 'api/admin/threatintel/abusech' })
 
-// GET /api/admin/threatintel/abusech - Query Abuse.ch feeds
+// GET /api/admin/security/threatintel/abusech - Query Abuse.ch feeds
 export async function GET(request: NextRequest) {
   try {
     // Verify admin authentication

@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic"
 
 const log = logger.child({ module: "api/admin/lateral-movement/[id]" })
 
-// GET /api/admin/lateral-movement/[id] - Get lateral movement details
+// GET /api/admin/security/lateral-movement/[id] - Get lateral movement details
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -35,7 +35,7 @@ export async function GET(
   }
 }
 
-// PATCH /api/admin/lateral-movement/[id] - Update lateral movement status
+// PATCH /api/admin/security/lateral-movement/[id] - Update lateral movement status
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

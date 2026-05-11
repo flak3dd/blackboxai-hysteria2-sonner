@@ -58,7 +58,7 @@ export function BeaconDetailModal({ beacon, open, onOpenChange }: BeaconDetailMo
     if (!beacon) return
     setCredentialsLoading(true)
     try {
-      const res = await apiFetch(`/api/admin/credentials?sourceHostId=${beacon.id}`)
+      const res = await apiFetch(`/api/admin/security/credentials?sourceHostId=${beacon.id}`)
       if (res.ok) {
         const data = await res.json()
         setCredentials(data.credentials || [])
@@ -74,7 +74,7 @@ export function BeaconDetailModal({ beacon, open, onOpenChange }: BeaconDetailMo
     if (!beacon) return
     setLateralMovementsLoading(true)
     try {
-      const res = await apiFetch(`/api/admin/lateral-movement?fromHostId=${beacon.id}`)
+      const res = await apiFetch(`/api/admin/security/lateral-movement?fromHostId=${beacon.id}`)
       if (res.ok) {
         const data = await res.json()
         setLateralMovements(data.movements || [])

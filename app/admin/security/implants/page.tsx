@@ -1,4 +1,4 @@
-import { ImplantsView } from "@/components/admin/implants/implants-view"
+import { ImplantsView } from "@/components/admin/security/implants/implants-view"
 
 export const dynamic = "force-dynamic"
 

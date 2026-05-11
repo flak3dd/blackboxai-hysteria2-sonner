@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { DeployModal } from "@/components/admin/nodes/deploy-modal"
+import { DeployModal } from "@/components/admin/operations/nodes/deploy-modal"
 import {
   type NodeItem,
   type ProfileItem,
@@ -17,7 +17,7 @@ import {
   RotateAuthModal,
   DeleteNodeModal,
   ApplyProfileToNodesModal,
-} from "@/components/admin/nodes/node-modals"
+} from "@/components/admin/operations/nodes/node-modals"
 
 type ModalState =
   | { kind: "closed" }
@@ -74,7 +74,7 @@ export function NodesView() {
 
   const load = useCallback(async () => {
     try {
-      const res = await apiFetch("/api/admin/nodes", { cache: "no-store" })
+      const res = await apiFetch("/api/admin/operations/nodes", { cache: "no-store" })
       if (!res.ok) throw new Error(`${res.status}`)
       const data = await res.json()
       const items: NodeItem[] = (Array.isArray(data) ? data : data.nodes ?? []).map(
@@ -93,7 +93,7 @@ export function NodesView() {
       setNodes(items)
 
       // also load profiles
-      const pRes = await apiFetch("/api/admin/profiles", { cache: "no-store" }).catch(() => null)
+      const pRes = await apiFetch("/api/admin/configuration/profiles", { cache: "no-store" }).catch(() => null)
       if (pRes?.ok) {
         const pd = await pRes.json()
         setProfiles((Array.isArray(pd) ? pd : pd.profiles ?? []) as ProfileItem[])

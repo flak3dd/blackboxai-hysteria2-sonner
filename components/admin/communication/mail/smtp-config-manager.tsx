@@ -60,7 +60,7 @@ export function SmtpConfigManager() {
 
   const loadConfigs = useCallback(async () => {
     try {
-      const res = await apiFetch("/api/admin/mail/smtp-configs", { cache: "no-store" })
+      const res = await apiFetch("/api/admin/communication/mail/smtp-configs", { cache: "no-store" })
       if (!res.ok) throw new Error(`${res.status}`)
       const data = await res.json()
       setConfigs(data.configs ?? [])
@@ -116,8 +116,8 @@ export function SmtpConfigManager() {
       }
 
       const url = editing
-        ? `/api/admin/mail/smtp-configs/${editing.id}`
-        : "/api/admin/mail/smtp-configs"
+        ? `/api/admin/communication/mail/smtp-configs/${editing.id}`
+        : "/api/admin/communication/mail/smtp-configs"
       const method = editing ? "PATCH" : "POST"
 
       const res = await apiFetch(url, {
@@ -148,7 +148,7 @@ export function SmtpConfigManager() {
   const handleDelete = useCallback(async (id: string) => {
     if (!confirm("Delete this SMTP configuration?")) return
     try {
-      const res = await apiFetch(`/api/admin/mail/smtp-configs/${id}`, {
+      const res = await apiFetch(`/api/admin/communication/mail/smtp-configs/${id}`, {
         method: "DELETE",
       })
       if (!res.ok) throw new Error(`${res.status}`)
@@ -165,7 +165,7 @@ export function SmtpConfigManager() {
   const handleTest = useCallback(async (id: string) => {
     setTestingId(id)
     try {
-      const res = await apiFetch(`/api/admin/mail/smtp-configs/${id}/test`, {
+      const res = await apiFetch(`/api/admin/communication/mail/smtp-configs/${id}/test`, {
         method: "POST",
       })
       const data = await res.json()

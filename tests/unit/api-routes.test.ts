@@ -5,9 +5,9 @@
  * Tests Next.js API route handlers using mock request objects
  */
 
-import { GET as getUsers, POST as createUser } from '@/app/api/admin/users/route'
-import { GET as getImplants, POST as createImplant } from '@/app/api/admin/implants/route'
-import { GET as getPayloads } from '@/app/api/admin/payloads/route'
+import { GET as getUsers, POST as createUser } from '@/app/api/admin/configuration/users/route'
+import { GET as getImplants, POST as createImplant } from '@/app/api/admin/security/implants/route'
+import { GET as getPayloads } from '@/app/api/admin/security/payloads/route'
 import { safeRedirectTarget } from '@/lib/auth/redirect'
 
 // Mock the auth module to bypass verification
@@ -97,9 +97,9 @@ function mockRequest(url: string, options?: RequestInit): any {
 
 // ── Users API ────────────────────────────────────────────────
 
-describe('GET /api/admin/users', () => {
+describe('GET /api/admin/configuration/users', () => {
   it('returns list of users', async () => {
-    const req = mockRequest('http://localhost:3000/api/admin/users')
+    const req = mockRequest('http://localhost:3000/api/admin/configuration/users')
     const response = await getUsers(req)
     const data = await response.json()
     expect(data.users).toBeDefined()
@@ -107,9 +107,9 @@ describe('GET /api/admin/users', () => {
   })
 })
 
-describe('POST /api/admin/users', () => {
+describe('POST /api/admin/configuration/users', () => {
   it('creates a user with valid data', async () => {
-    const req = mockRequest('http://localhost:3000/api/admin/users', {
+    const req = mockRequest('http://localhost:3000/api/admin/configuration/users', {
       method: 'POST',
       body: JSON.stringify({ displayName: 'Test', authToken: 'valid-token' }),
     })
@@ -120,9 +120,9 @@ describe('POST /api/admin/users', () => {
 
 // ── Implants API ─────────────────────────────────────────────
 
-describe('GET /api/admin/implants', () => {
+describe('GET /api/admin/security/implants', () => {
   it('returns list of implants with stats', async () => {
-    const req = mockRequest('http://localhost:3000/api/admin/implants')
+    const req = mockRequest('http://localhost:3000/api/admin/security/implants')
     const response = await getImplants(req)
     const data = await response.json()
     expect(data.implants).toBeDefined()
@@ -131,9 +131,9 @@ describe('GET /api/admin/implants', () => {
   })
 })
 
-describe('POST /api/admin/implants', () => {
+describe('POST /api/admin/security/implants', () => {
   it('creates an implant with valid data', async () => {
-    const req = mockRequest('http://localhost:3000/api/admin/implants', {
+    const req = mockRequest('http://localhost:3000/api/admin/security/implants', {
       method: 'POST',
       body: JSON.stringify({
         name: 'New Implant',
@@ -150,9 +150,9 @@ describe('POST /api/admin/implants', () => {
 
 // ── Payloads API ─────────────────────────────────────────────
 
-describe('GET /api/admin/payloads', () => {
+describe('GET /api/admin/security/payloads', () => {
   it('returns list of payload builds with stats', async () => {
-    const req = mockRequest('http://localhost:3000/api/admin/payloads')
+    const req = mockRequest('http://localhost:3000/api/admin/security/payloads')
     const response = await getPayloads(req)
     const data = await response.json()
     expect(data.builds).toBeDefined()

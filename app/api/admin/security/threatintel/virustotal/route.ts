@@ -10,7 +10,7 @@ import logger from '@/lib/logger'
 
 const log = logger.child({ module: 'api/admin/threatintel/virustotal' })
 
-// GET /api/admin/threatintel/virustotal - Analyze indicators with VirusTotal
+// GET /api/admin/security/threatintel/virustotal - Analyze indicators with VirusTotal
 export async function GET(request: NextRequest) {
   try {
     // Verify admin authentication

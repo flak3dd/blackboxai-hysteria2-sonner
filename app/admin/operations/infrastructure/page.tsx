@@ -1,4 +1,4 @@
-import { InfrastructureOverview } from "@/components/admin/infrastructure/overview"
+import { InfrastructureOverview } from "@/components/admin/operations/infrastructure/overview"
 
 export const dynamic = "force-dynamic"
 

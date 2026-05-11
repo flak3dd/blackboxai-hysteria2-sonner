@@ -23,7 +23,7 @@ const PayloadBuildCreateSchema = z.object({
   config: z.record(z.string(), z.unknown()),
 })
 
-// GET /api/admin/payloads - List payload builds (paginated)
+// GET /api/admin/security/payloads - List payload builds (paginated)
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     await verifyAdmin(req)
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 }
 
-// POST /api/admin/payloads - Create a new payload build
+// POST /api/admin/security/payloads - Create a new payload build
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     await verifyAdmin(req)
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 }
 
-// DELETE /api/admin/payloads - Delete a payload build
+// DELETE /api/admin/security/payloads - Delete a payload build
 export async function DELETE(req: NextRequest): Promise<NextResponse> {
   try {
     await verifyAdmin(req)

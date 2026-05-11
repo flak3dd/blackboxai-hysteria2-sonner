@@ -8,7 +8,7 @@ import { threatCorrelationEngine } from '@/lib/ai/threat-correlation'
 import { anomalyDetectionEngine } from '@/lib/ai/anomaly-detection'
 import { aiInitializer } from '@/lib/ai/ai-initializer'
 
-// POST /api/admin/ai/autonomous/task - Create autonomous task
+// POST /api/admin/automation/ai/autonomous/task - Create autonomous task
 export async function POST(request: NextRequest) {
   try {
     const admin = await verifyAdmin(request)
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET /api/admin/ai/autonomous - Get autonomous system status
+// GET /api/admin/automation/ai/autonomous - Get autonomous system status
 export async function GET(request: NextRequest) {
   try {
     const admin = await verifyAdmin(request)

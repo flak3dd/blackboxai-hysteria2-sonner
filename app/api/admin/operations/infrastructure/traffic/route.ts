@@ -37,7 +37,7 @@ function getTrafficRouter(): TrafficRouter {
   return trafficRouter
 }
 
-// GET /api/admin/infrastructure/traffic - Get traffic routing status and routes
+// GET /api/admin/operations/infrastructure/traffic - Get traffic routing status and routes
 export async function GET(request: NextRequest) {
   try {
     await verifyAdmin(request)
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/admin/infrastructure/traffic/route - Route traffic through infrastructure
+// POST /api/admin/operations/infrastructure/traffic/route - Route traffic through infrastructure
 export async function POST(request: NextRequest) {
   try {
     await verifyAdmin(request)
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// PUT /api/admin/infrastructure/traffic/record - Record route result for circuit breaker
+// PUT /api/admin/operations/infrastructure/traffic/record - Record route result for circuit breaker
 export async function PUT(request: NextRequest) {
   try {
     await verifyAdmin(request)
@@ -126,7 +126,7 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE /api/admin/infrastructure/traffic/cleanup - Clean up old routes
+// DELETE /api/admin/operations/infrastructure/traffic/cleanup - Clean up old routes
 export async function DELETE(request: NextRequest) {
   try {
     await verifyAdmin(request)

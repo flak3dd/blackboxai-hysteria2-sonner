@@ -13,8 +13,8 @@ let dangerModeSettings = {
 
 // Sync with tool-executor
 const { setDangerModeSettings: setToolExecutorDangerMode } = await import("@/lib/grok/tool-executor")
-// Sync with deployment route  
-const { setDangerModeSettings: setDeploymentDangerMode } = await import("@/app/api/admin/deploy/route")
+// Sync with deployment route
+const { setDangerModeSettings: setDeploymentDangerMode } = await import("@/app/api/admin/operations/deploy/route")
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {

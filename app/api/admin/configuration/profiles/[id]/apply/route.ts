@@ -7,7 +7,7 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 /**
- * POST /api/admin/profiles/:id/apply
+ * POST /api/admin/configuration/profiles/:id/apply
  * Body: { nodeIds: string[] }
  *
  * Links nodes to this profile, applies profile tags to each node,

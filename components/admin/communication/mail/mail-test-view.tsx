@@ -149,7 +149,7 @@ export function MailTestView() {
   const testAll = useCallback(async () => {
     setTestingAll(true)
     try {
-      const res = await apiFetch("/api/admin/mail/test-all", {
+      const res = await apiFetch("/api/admin/communication/mail/test-all", {
         method: "POST",
         cache: "no-store",
       })
@@ -177,7 +177,7 @@ export function MailTestView() {
   const testSingle = useCallback(async (id: string) => {
     setTestingSingle(id)
     try {
-      const res = await apiFetch(`/api/admin/mail/accounts/${id}/test`, {
+      const res = await apiFetch(`/api/admin/communication/mail/accounts/${id}/test`, {
         method: "POST",
         cache: "no-store",
       })
@@ -200,7 +200,7 @@ export function MailTestView() {
     setSelectedAccount(id)
     setLoadingMessages(true)
     try {
-      const res = await apiFetch(`/api/admin/mail/accounts/${id}/messages?limit=20`, {
+      const res = await apiFetch(`/api/admin/communication/mail/accounts/${id}/messages?limit=20`, {
         cache: "no-store",
       })
       if (!res.ok) throw new Error(`${res.status}`)
@@ -220,7 +220,7 @@ export function MailTestView() {
   const toggleAutoTest = useCallback(
     async (action: "enable" | "disable") => {
       try {
-        const res = await apiFetch("/api/admin/mail/auto-test", {
+        const res = await apiFetch("/api/admin/communication/mail/auto-test", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
@@ -245,7 +245,7 @@ export function MailTestView() {
   const loadSmtpConfigsList = useCallback(async () => {
     setLoadingSmtpConfigs(true)
     try {
-      const res = await apiFetch("/api/admin/mail/smtp-configs", { cache: "no-store" })
+      const res = await apiFetch("/api/admin/communication/mail/smtp-configs", { cache: "no-store" })
       if (res.ok) {
         const data = await res.json()
         setSmtpConfigs(data.configs ?? [])
@@ -285,7 +285,7 @@ export function MailTestView() {
         }
       }
 
-      const res = await apiFetch("/api/admin/mail/send-test", {
+      const res = await apiFetch("/api/admin/communication/mail/send-test", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
@@ -311,7 +311,7 @@ export function MailTestView() {
   const handleSendResend = useCallback(async () => {
     setSendingResend(true)
     try {
-      const res = await apiFetch("/api/admin/mail/resend/send", {
+      const res = await apiFetch("/api/admin/communication/mail/resend/send", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -396,7 +396,7 @@ export function MailTestView() {
     setBulkDryRunResult(null)
     setBulkSendResult(null)
     try {
-      const res = await apiFetch("/api/admin/mail/bulk-send", {
+      const res = await apiFetch("/api/admin/communication/mail/bulk-send", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -441,7 +441,7 @@ export function MailTestView() {
     setBulkSending(true)
     setBulkSendResult(null)
     try {
-      const res = await apiFetch("/api/admin/mail/bulk-send", {
+      const res = await apiFetch("/api/admin/communication/mail/bulk-send", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -494,7 +494,7 @@ export function MailTestView() {
   /* ---- Template functions ---- */
   const loadTemplates = useCallback(async () => {
     try {
-      const res = await apiFetch("/api/admin/mail/templates", { cache: "no-store" })
+      const res = await apiFetch("/api/admin/communication/mail/templates", { cache: "no-store" })
       if (res.ok) {
         const data = await res.json()
         setTemplates(data.templates || [])
@@ -506,7 +506,7 @@ export function MailTestView() {
 
   const saveTemplate = useCallback(async () => {
     try {
-      const res = await apiFetch("/api/admin/mail/templates", {
+      const res = await apiFetch("/api/admin/communication/mail/templates", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -534,7 +534,7 @@ export function MailTestView() {
 
   const deleteTemplate = useCallback(async (id: string) => {
     try {
-      const res = await apiFetch(`/api/admin/mail/templates?id=${id}`, {
+      const res = await apiFetch(`/api/admin/communication/mail/templates?id=${id}`, {
         method: "DELETE",
       })
       if (!res.ok) throw new Error("Failed to delete template")
@@ -547,7 +547,7 @@ export function MailTestView() {
 
   const extractTemplateVariables = useCallback(async () => {
     try {
-      const res = await apiFetch("/api/admin/mail/templates", {
+      const res = await apiFetch("/api/admin/communication/mail/templates", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -570,9 +570,9 @@ export function MailTestView() {
   const loadQueueData = useCallback(async () => {
     try {
       const [statsRes, emailsRes, configRes] = await Promise.all([
-        apiFetch("/api/admin/mail/queue?action=stats", { cache: "no-store" }),
-        apiFetch("/api/admin/mail/queue", { cache: "no-store" }),
-        apiFetch("/api/admin/mail/queue?action=config", { cache: "no-store" }),
+        apiFetch("/api/admin/communication/mail/queue?action=stats", { cache: "no-store" }),
+        apiFetch("/api/admin/communication/mail/queue", { cache: "no-store" }),
+        apiFetch("/api/admin/communication/mail/queue?action=config", { cache: "no-store" }),
       ])
       
       if (statsRes.ok) setQueueStats(await statsRes.json())
@@ -589,7 +589,7 @@ export function MailTestView() {
   /* ---- Tracking functions ---- */
   const loadTrackingData = useCallback(async () => {
     try {
-      const res = await apiFetch("/api/admin/mail/tracking", { cache: "no-store" })
+      const res = await apiFetch("/api/admin/communication/mail/tracking", { cache: "no-store" })
       if (res.ok) {
         const data = await res.json()
         setTrackingEvents(data.events || [])
@@ -603,8 +603,8 @@ export function MailTestView() {
   const loadBounceData = useCallback(async () => {
     try {
       const [statsRes, suppressedRes] = await Promise.all([
-        apiFetch("/api/admin/mail/bounce?action=stats", { cache: "no-store" }),
-        apiFetch("/api/admin/mail/bounce?action=suppressed", { cache: "no-store" }),
+        apiFetch("/api/admin/communication/mail/bounce?action=stats", { cache: "no-store" }),
+        apiFetch("/api/admin/communication/mail/bounce?action=suppressed", { cache: "no-store" }),
       ])
       
       if (statsRes.ok) setBounceStats(await statsRes.json())
@@ -613,7 +613,7 @@ export function MailTestView() {
         setSuppressedEmails(data.emails || [])
       }
       
-      const eventsRes = await apiFetch("/api/admin/mail/bounce", { cache: "no-store" })
+      const eventsRes = await apiFetch("/api/admin/communication/mail/bounce", { cache: "no-store" })
       if (eventsRes.ok) {
         const data = await eventsRes.json()
         setBounceEvents(data.events || [])
@@ -640,8 +640,8 @@ export function MailTestView() {
     async function load() {
       try {
         const [acctRes, stateRes] = await Promise.all([
-          apiFetch("/api/admin/mail/accounts", { cache: "no-store" }),
-          apiFetch("/api/admin/mail/auto-test", { cache: "no-store" }),
+          apiFetch("/api/admin/communication/mail/accounts", { cache: "no-store" }),
+          apiFetch("/api/admin/communication/mail/auto-test", { cache: "no-store" }),
         ])
         if (acctRes.ok) {
           const data = await acctRes.json()

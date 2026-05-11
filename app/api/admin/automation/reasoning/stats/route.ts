@@ -14,7 +14,7 @@ import { reasoningTraceSystem } from '@/lib/ai/reasoning/reasoning-trace'
 import { metaCognitionEngine } from '@/lib/ai/reasoning/meta-cognition'
 
 /**
- * GET /api/admin/reasoning/stats
+ * GET /api/admin/automation/reasoning/stats
  * Get reasoning statistics
  */
 export async function GET(request: NextRequest) {

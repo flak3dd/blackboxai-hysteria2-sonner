@@ -42,16 +42,16 @@ export default function ThreatPage() {
       const params = new URLSearchParams()
 
       if (source === "virustotal") {
-        url = `/api/admin/threatintel/virustotal`
+        url = `/api/admin/security/threatintel/virustotal`
         params.append("type", indicatorType)
         params.append("indicator", indicator.trim())
       } else if (source === "abusech") {
-        url = `/api/admin/threatintel/abusech`
+        url = `/api/admin/security/threatintel/abusech`
         params.append("feed", "malwarebazaar")
         params.append("type", indicatorType === "hash" ? "hash" : "ioc")
         params.append("query", indicator.trim())
       } else if (source === "alienvault") {
-        url = `/api/admin/threatintel/alienvault`
+        url = `/api/admin/security/threatintel/alienvault`
         params.append("type", indicatorType)
         params.append("indicator", indicator.trim())
       }

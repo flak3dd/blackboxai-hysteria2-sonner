@@ -210,7 +210,7 @@ async function buildWindowsExe(id: string, config: PayloadConfig): Promise<void>
   const { updatePayloadBuild: dbUpdate } = await import("@/lib/db/payload-builds")
   await dbUpdate(id, {
     sizeBytes: artifactSize,
-    downloadUrl: `/api/admin/payloads/${id}/download`
+    downloadUrl: `/api/admin/security/payloads/${id}/download`
   })
 }
 
@@ -230,7 +230,7 @@ async function buildLinuxElf(id: string, config: PayloadConfig): Promise<void> {
   const { updatePayloadBuild: dbUpdate } = await import("@/lib/db/payload-builds")
   await dbUpdate(id, {
     sizeBytes: artifactSize,
-    downloadUrl: `/api/admin/payloads/${id}/download`
+    downloadUrl: `/api/admin/security/payloads/${id}/download`
   })
 }
 
@@ -252,7 +252,7 @@ async function buildMacosApp(id: string, config: PayloadConfig): Promise<void> {
   const { updatePayloadBuild: dbUpdate } = await import("@/lib/db/payload-builds")
   await dbUpdate(id, {
     sizeBytes: artifactSize,
-    downloadUrl: `/api/admin/payloads/${id}/download`
+    downloadUrl: `/api/admin/security/payloads/${id}/download`
   })
 }
 
@@ -272,7 +272,7 @@ async function buildPowerShell(id: string, config: PayloadConfig): Promise<void>
   const { updatePayloadBuild: dbUpdate } = await import("@/lib/db/payload-builds")
   await dbUpdate(id, {
     sizeBytes: artifactSize,
-    downloadUrl: `/api/admin/payloads/${id}/download`
+    downloadUrl: `/api/admin/security/payloads/${id}/download`
   })
 }
 
@@ -292,7 +292,7 @@ async function buildPython(id: string, config: PayloadConfig): Promise<void> {
   const { updatePayloadBuild: dbUpdate } = await import("@/lib/db/payload-builds")
   await dbUpdate(id, {
     sizeBytes: artifactSize,
-    downloadUrl: `/api/admin/payloads/${id}/download`
+    downloadUrl: `/api/admin/security/payloads/${id}/download`
   })
 }
 

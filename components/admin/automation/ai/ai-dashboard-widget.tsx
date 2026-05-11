@@ -104,7 +104,7 @@ export function AIDashboardWidget() {
 
   const fetchStats = async () => {
     try {
-      const res = await apiFetch("/api/admin/ai/stats")
+      const res = await apiFetch("/api/admin/automation/ai/stats")
       if (res.ok) {
         const data: AIStatsResponse = await res.json()
         setStats(data.stats)
@@ -120,7 +120,7 @@ export function AIDashboardWidget() {
 
   const fetchAISystemStatus = async () => {
     try {
-      const res = await apiFetch("/api/admin/ai/autonomous?type=initializer")
+      const res = await apiFetch("/api/admin/automation/ai/autonomous?type=initializer")
       if (res.ok) {
         const data = await res.json()
         setAiSystemStatus(data)
@@ -153,7 +153,7 @@ export function AIDashboardWidget() {
   const handleInitializeAI = async () => {
     try {
       setAiSystemLoading(true)
-      const res = await apiFetch("/api/admin/ai/autonomous", {
+      const res = await apiFetch("/api/admin/automation/ai/autonomous", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "initialize" }),
@@ -171,7 +171,7 @@ export function AIDashboardWidget() {
   const handleShutdownAI = async () => {
     try {
       setAiSystemLoading(true)
-      const res = await apiFetch("/api/admin/ai/autonomous", {
+      const res = await apiFetch("/api/admin/automation/ai/autonomous", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "shutdown" }),

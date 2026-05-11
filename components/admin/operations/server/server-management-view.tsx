@@ -49,7 +49,7 @@ export function ServerManagementView() {
 
   const loadStatus = async () => {
     try {
-      const res = await fetch("/api/admin/server/status", { cache: "no-store" })
+      const res = await fetch("/api/admin/operations/server/status", { cache: "no-store" })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       setStatus(data.status || null)
@@ -64,7 +64,7 @@ export function ServerManagementView() {
 
   const loadTraffic = async () => {
     try {
-      const res = await fetch("/api/admin/server/traffic", { cache: "no-store" })
+      const res = await fetch("/api/admin/operations/server/traffic", { cache: "no-store" })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       setTraffic(data.traffic || null)
@@ -75,7 +75,7 @@ export function ServerManagementView() {
 
   const loadLogs = async () => {
     try {
-      const res = await fetch("/api/admin/server/logs", { cache: "no-store" })
+      const res = await fetch("/api/admin/operations/server/logs", { cache: "no-store" })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       setLogs(data.logs || [])
@@ -87,7 +87,7 @@ export function ServerManagementView() {
   const startServer = async () => {
     setActionLoading("start")
     try {
-      const res = await fetch("/api/admin/server/start", { method: "POST" })
+      const res = await fetch("/api/admin/operations/server/start", { method: "POST" })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       toast.success("Server started successfully")
       await loadStatus()
@@ -103,7 +103,7 @@ export function ServerManagementView() {
   const stopServer = async () => {
     setActionLoading("stop")
     try {
-      const res = await fetch("/api/admin/server/stop", { method: "POST" })
+      const res = await fetch("/api/admin/operations/server/stop", { method: "POST" })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       toast.success("Server stopped successfully")
       await loadStatus()
@@ -119,7 +119,7 @@ export function ServerManagementView() {
   const restartServer = async () => {
     setActionLoading("restart")
     try {
-      const res = await fetch("/api/admin/server/restart", { method: "POST" })
+      const res = await fetch("/api/admin/operations/server/restart", { method: "POST" })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       toast.success("Server restarted successfully")
       await loadStatus()

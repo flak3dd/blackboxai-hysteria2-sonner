@@ -11,7 +11,7 @@ import logger from '@/lib/logger'
 
 const log = logger.child({ module: 'api/admin/threatintel/alienvault' })
 
-// GET /api/admin/threatintel/alienvault - Analyze indicators with AlienVault OTX
+// GET /api/admin/security/threatintel/alienvault - Analyze indicators with AlienVault OTX
 export async function GET(request: NextRequest) {
   try {
     // Verify admin authentication

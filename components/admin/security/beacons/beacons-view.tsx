@@ -90,7 +90,7 @@ export default function BeaconsView() {
         params.append("search", filters.search)
       }
       
-      const res = await apiFetch(`/api/admin/beacons?${params.toString()}`)
+      const res = await apiFetch(`/api/admin/security/beacons?${params.toString()}`)
       
       if (res.ok) {
         const data = await res.json()

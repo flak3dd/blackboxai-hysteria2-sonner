@@ -10,7 +10,7 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 /**
- * GET /api/admin/mail/smtp-configs
+ * GET /api/admin/communication/mail/smtp-configs
  * List all saved SMTP configurations (passwords excluded)
  */
 export async function GET(req: NextRequest): Promise<NextResponse> {
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 }
 
 /**
- * POST /api/admin/mail/smtp-configs
+ * POST /api/admin/communication/mail/smtp-configs
  * Create a new SMTP configuration
  */
 export async function POST(req: NextRequest): Promise<NextResponse> {

@@ -1,4 +1,4 @@
-import { WorkflowAnalyticsDashboard } from "@/components/admin/workflow/workflow-analytics-dashboard"
+import { WorkflowAnalyticsDashboard } from "@/components/admin/intelligence/workflow/workflow-analytics-dashboard"
 
 export const dynamic = "force-dynamic"
 

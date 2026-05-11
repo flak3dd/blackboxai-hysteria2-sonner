@@ -480,7 +480,7 @@ export function AiChatView({ hideHeader = false }: { hideHeader?: boolean } = {}
 
     const updatedTags = [...new Set([...conv.tags, tag.trim()])]
     try {
-      const res = await apiFetch("/api/admin/ai/conversations", {
+      const res = await apiFetch("/api/admin/automation/ai/conversations", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ conversationId, tags: updatedTags }),
@@ -506,7 +506,7 @@ export function AiChatView({ hideHeader = false }: { hideHeader?: boolean } = {}
 
     const updatedTags = conv.tags.filter((t) => t !== tag)
     try {
-      const res = await apiFetch("/api/admin/ai/conversations", {
+      const res = await apiFetch("/api/admin/automation/ai/conversations", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ conversationId, tags: updatedTags }),
@@ -536,8 +536,8 @@ export function AiChatView({ hideHeader = false }: { hideHeader?: boolean } = {}
     setSidebarLoading(true)
     setInitError(null)
     const [convRes, tmplRes] = await Promise.allSettled([
-      apiFetch("/api/admin/ai/conversations"),
-      apiFetch("/api/admin/ai/templates"),
+      apiFetch("/api/admin/automation/ai/conversations"),
+      apiFetch("/api/admin/automation/ai/templates"),
     ])
 
     if (convRes.status === "fulfilled" && convRes.value.ok) {
@@ -551,7 +551,7 @@ export function AiChatView({ hideHeader = false }: { hideHeader?: boolean } = {}
         if (cached) {
           setActiveId(savedActiveId)
           setMessages(cached.messages)
-          void apiFetch(`/api/admin/ai/conversations/${savedActiveId}`)
+          void apiFetch(`/api/admin/automation/ai/conversations/${savedActiveId}`)
             .then(async (res) => {
               if (!res.ok) return
               const payload = await res.json()
@@ -594,7 +594,7 @@ export function AiChatView({ hideHeader = false }: { hideHeader?: boolean } = {}
     const loadGuideContext = async () => {
       setOpGuideLoading(true)
       try {
-        const res = await apiFetch("/api/admin/ai/deploy-profile")
+        const res = await apiFetch("/api/admin/automation/ai/deploy-profile")
         if (!res.ok) return
         const data = (await res.json()) as Partial<OpGuideContext>
         if (!data || !data.primaryProfile || !data.profiles) return
@@ -629,7 +629,7 @@ export function AiChatView({ hideHeader = false }: { hideHeader?: boolean } = {}
         return
       }
       try {
-        const res = await apiFetch(`/api/admin/ai/conversations/${id}`)
+        const res = await apiFetch(`/api/admin/automation/ai/conversations/${id}`)
         if (res.ok) {
           const data = await res.json()
           setMessages(data.conversation.messages ?? [])
@@ -649,7 +649,7 @@ export function AiChatView({ hideHeader = false }: { hideHeader?: boolean } = {}
 
   const refreshConversationFromServer = useCallback(
     async (conversationId: string) => {
-      const res = await apiFetch(`/api/admin/ai/conversations/${conversationId}`)
+      const res = await apiFetch(`/api/admin/automation/ai/conversations/${conversationId}`)
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: `${res.status}` }))
         throw new Error(err.error ?? "Failed to refresh conversation")
@@ -679,7 +679,7 @@ export function AiChatView({ hideHeader = false }: { hideHeader?: boolean } = {}
   /* ---- Create new conversation ---- */
   const createConversation = useCallback(async () => {
     try {
-      const res = await apiFetch("/api/admin/ai/conversations", {
+      const res = await apiFetch("/api/admin/automation/ai/conversations", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ title: "New conversation" }),
@@ -704,7 +704,7 @@ export function AiChatView({ hideHeader = false }: { hideHeader?: boolean } = {}
   const deleteConversation = useCallback(
     async (id: string) => {
       try {
-        const res = await apiFetch(`/api/admin/ai/conversations/${id}`, { method: "DELETE" })
+        const res = await apiFetch(`/api/admin/automation/ai/conversations/${id}`, { method: "DELETE" })
         if (!res.ok) {
           const err = await res.json().catch(() => ({ error: `${res.status}` }))
           throw new Error(err.error ?? "Delete failed")
@@ -760,7 +760,7 @@ export function AiChatView({ hideHeader = false }: { hideHeader?: boolean } = {}
     let failureMessages: ChatMessage[] = []
 
     try {
-      const res = await apiFetch("/api/admin/ai/chat", {
+      const res = await apiFetch("/api/admin/automation/ai/chat", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({

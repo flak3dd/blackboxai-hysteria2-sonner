@@ -95,7 +95,7 @@ export function MigratorView() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await apiFetch("/api/admin/mail/migrator/config", {
+        const res = await apiFetch("/api/admin/communication/mail/migrator/config", {
           cache: "no-store",
         })
         if (res.ok) {
@@ -123,7 +123,7 @@ export function MigratorView() {
   const handleSave = useCallback(async () => {
     setSaving(true)
     try {
-      const res = await apiFetch("/api/admin/mail/migrator/config", {
+      const res = await apiFetch("/api/admin/communication/mail/migrator/config", {
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ config, accounts }),
@@ -144,7 +144,7 @@ export function MigratorView() {
     // Save first, then run
     setSaving(true)
     try {
-      const saveRes = await apiFetch("/api/admin/mail/migrator/config", {
+      const saveRes = await apiFetch("/api/admin/communication/mail/migrator/config", {
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ config, accounts }),
@@ -163,7 +163,7 @@ export function MigratorView() {
     setLogs([])
     setExitCode(null)
     try {
-      const res = await apiFetch("/api/admin/mail/migrator/run", {
+      const res = await apiFetch("/api/admin/communication/mail/migrator/run", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ folders }),

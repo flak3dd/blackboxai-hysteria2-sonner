@@ -77,7 +77,7 @@ export default function SettingsPage() {
 
   const loadRef = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/config/universal", { cache: "no-store" })
+      const res = await fetch("/api/admin/configuration/config/universal", { cache: "no-store" })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const json = await res.json()
       return json.sections as AllSections
@@ -114,7 +114,7 @@ export default function SettingsPage() {
   const saveSection = useCallback(async (section: string, data: unknown) => {
     setSaving(true)
     try {
-      const res = await fetch("/api/admin/config/universal", {
+      const res = await fetch("/api/admin/configuration/config/universal", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ section, data }),
@@ -533,7 +533,7 @@ function ProviderKeysSection() {
 
   useEffect(() => {
     let cancelled = false
-    fetch("/api/admin/config/provider-keys", { cache: "no-store" })
+    fetch("/api/admin/configuration/config/provider-keys", { cache: "no-store" })
       .then((res) => res.ok ? res.json() : null)
       .then((data) => {
         if (cancelled || !data) return
@@ -557,7 +557,7 @@ function ProviderKeysSection() {
       for (const k of edited) {
         payload[k] = keys[k] ?? ""
       }
-      const res = await fetch("/api/admin/config/provider-keys", {
+      const res = await fetch("/api/admin/configuration/config/provider-keys", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -740,7 +740,7 @@ function DangerModeSection({
     onChange(newMode)
 
     try {
-      const res = await fetch("/api/admin/config/danger-mode", {
+      const res = await fetch("/api/admin/configuration/config/danger-mode", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(newMode),

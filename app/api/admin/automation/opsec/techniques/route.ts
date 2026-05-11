@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic"
 
 const log = logger.child({ module: "api/admin/opsec/techniques" })
 
-// GET /api/admin/opsec/techniques
+// GET /api/admin/automation/opsec/techniques
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     await verifyAdmin(req)

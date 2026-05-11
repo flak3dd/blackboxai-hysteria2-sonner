@@ -1,0 +1,8 @@
+{
+  "defaultFrom": "noreply@panel.anzstaff-club.au",
+  "defaultProvider": "resend",
+  "defaultRateLimitPerMinute": 120,
+  "defaultBatchSize": 20,
+  "defaultDelayMs": 500,
+  "trackingEnabled": true
+}

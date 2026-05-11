@@ -5,7 +5,7 @@ import logger from '@/lib/logger'
 
 const log = logger.child({ module: 'api/admin/osint/domain' })
 
-// GET /api/admin/osint/domain - Perform domain enumeration
+// GET /api/admin/intelligence/osint/domain - Perform domain enumeration
 export async function GET(request: NextRequest) {
   try {
     // Verify admin authentication

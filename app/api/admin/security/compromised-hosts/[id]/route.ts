@@ -22,7 +22,7 @@ const UpdateSchema = z.object({
   implantId: z.string().optional(),
 })
 
-// GET /api/admin/compromised-hosts/[id]
+// GET /api/admin/security/compromised-hosts/[id]
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -48,7 +48,7 @@ export async function GET(
   }
 }
 
-// PATCH /api/admin/compromised-hosts/[id]
+// PATCH /api/admin/security/compromised-hosts/[id]
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -84,7 +84,7 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/admin/compromised-hosts/[id]
+// DELETE /api/admin/security/compromised-hosts/[id]
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

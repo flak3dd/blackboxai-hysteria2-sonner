@@ -21,7 +21,7 @@ const AssessSchema = z.object({
   options: z.record(z.any()).optional(),
 })
 
-// POST /api/admin/opsec/assess
+// POST /api/admin/automation/opsec/assess
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     await verifyAdmin(req)

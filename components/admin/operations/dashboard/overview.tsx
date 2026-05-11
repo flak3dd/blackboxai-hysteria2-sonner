@@ -18,8 +18,8 @@ import {
   ServerStatusPill,
   NodesHealthTable,
   ActivityFeed,
-} from "@/components/admin/dashboard/dashboard-widgets"
-import { AIDashboardWidget } from "@/components/admin/ai/ai-dashboard-widget"
+} from "@/components/admin/operations/dashboard/dashboard-widgets"
+import { AIDashboardWidget } from "@/components/admin/automation/ai/ai-dashboard-widget"
 
 const POLL_MS = 5000
 
@@ -152,7 +152,7 @@ export function DashboardOverview() {
     let cancelled = false
     async function tick() {
       try {
-        const res = await apiFetch("/api/admin/overview", { cache: "no-store" })
+        const res = await apiFetch("/api/admin/operations/overview", { cache: "no-store" })
         if (!res.ok) {
           if (!cancelled) setError(`overview failed (${res.status})`)
           return
@@ -184,7 +184,7 @@ export function DashboardOverview() {
 
   const fetchNodesNow = useCallback(async () => {
     try {
-      const res = await apiFetch("/api/admin/overview", { cache: "no-store" })
+      const res = await apiFetch("/api/admin/operations/overview", { cache: "no-store" })
       if (!res.ok) return
       const next = (await res.json()) as Overview
       const prev = prevRef.current

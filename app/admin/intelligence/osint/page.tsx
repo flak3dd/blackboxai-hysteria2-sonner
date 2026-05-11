@@ -76,7 +76,7 @@ export default function OSINTPage() {
         includeBruteForce: options.includeBruteForce.toString(),
       })
 
-      const response = await fetch(`/api/admin/osint/domain?${params}`)
+      const response = await fetch(`/api/admin/intelligence/osint/domain?${params}`)
       
       if (!response.ok) {
         const errorData = await response.json()

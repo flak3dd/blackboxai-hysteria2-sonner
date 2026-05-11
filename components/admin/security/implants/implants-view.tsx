@@ -118,7 +118,7 @@ export function ImplantsView() {
 
   const fetchImplants = async () => {
     try {
-      const response = await apiFetch("/api/admin/implants")
+      const response = await apiFetch("/api/admin/security/implants")
       if (!response.ok) throw new Error("Failed to fetch implants")
       const data = await response.json()
       setImplants(data.implants || [])
@@ -132,7 +132,7 @@ export function ImplantsView() {
 
   const fetchImplantTasks = async (implantId: string) => {
     try {
-      const response = await apiFetch(`/api/admin/implants/${selectedImplant?.id}`)
+      const response = await apiFetch(`/api/admin/security/implants/${selectedImplant?.id}`)
       if (!response.ok) throw new Error("Failed to fetch implant tasks")
       const data = await response.json()
       setImplantTasks(data.tasks || [])
@@ -145,7 +145,7 @@ export function ImplantsView() {
     if (!form.name.trim()) return
 
     try {
-      const response = await apiFetch("/api/admin/implants", {
+      const response = await apiFetch("/api/admin/security/implants", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -181,7 +181,7 @@ export function ImplantsView() {
         args = { command: taskForm.args }
       }
 
-      const response = await apiFetch(`/api/admin/implants/${selectedImplant.id}`, {
+      const response = await apiFetch(`/api/admin/security/implants/${selectedImplant.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

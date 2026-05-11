@@ -13,7 +13,7 @@ import { parsePagination, paginatedResponse } from "@/lib/pagination"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-// GET /api/admin/credentials - List credentials with filters
+// GET /api/admin/security/credentials - List credentials with filters
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     await verifyAdmin(req)
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 }
 
-// POST /api/admin/credentials - Create a new credential
+// POST /api/admin/security/credentials - Create a new credential
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     await verifyAdmin(req)

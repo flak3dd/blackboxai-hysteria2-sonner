@@ -81,7 +81,7 @@ function ClientConfigsViewInner() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await apiFetch("/api/admin/overview", { cache: "no-store" })
+        const res = await apiFetch("/api/admin/operations/overview", { cache: "no-store" })
         if (!res.ok) throw new Error(`${res.status}`)
         const data = await res.json()
         const nodeItems: NodeItem[] = (data.nodes?.items ?? []).map(
@@ -97,7 +97,7 @@ function ClientConfigsViewInner() {
         setNodes(nodeItems)
 
         // fetch users separately
-        const usersRes = await apiFetch("/api/admin/users", { cache: "no-store" })
+        const usersRes = await apiFetch("/api/admin/configuration/users", { cache: "no-store" })
         if (usersRes.ok) {
           const usersData = await usersRes.json()
           const items: UserItem[] = (Array.isArray(usersData) ? usersData : usersData.users ?? []).map(
@@ -167,7 +167,7 @@ function ClientConfigsViewInner() {
         // bandwidth hints are baked into the YAML via the endpoint
       }
       const yamlRes = await fetch(
-        `/api/admin/users/${selectedUserId}/client-config?node=${primaryNodeId}&${params.toString()}`,
+        `/api/admin/configuration/users/${selectedUserId}/client-config?node=${primaryNodeId}&${params.toString()}`,
         { cache: "no-store" },
       )
       if (!yamlRes.ok) throw new Error(`config ${yamlRes.status}`)
@@ -175,7 +175,7 @@ function ClientConfigsViewInner() {
 
       // fetch subscription base64
       const subRes = await fetch(
-        `/api/admin/users/${selectedUserId}/client-config?format=subscription`,
+        `/api/admin/configuration/users/${selectedUserId}/client-config?format=subscription`,
         { cache: "no-store" },
       )
       const base64 = subRes.ok ? await subRes.text() : ""

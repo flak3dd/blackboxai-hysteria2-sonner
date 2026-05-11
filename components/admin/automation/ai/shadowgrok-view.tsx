@@ -208,7 +208,7 @@ export function ShadowGrokView() {
   const loadHistory = useCallback(async () => {
     setHistoryLoading(true)
     try {
-      const res = await apiFetch("/api/admin/ai/shadowgrok")
+      const res = await apiFetch("/api/admin/automation/ai/shadowgrok")
       if (res.ok) {
         const data = await res.json()
         setExecutions(data.executions ?? [])
@@ -227,7 +227,7 @@ export function ShadowGrokView() {
   /* ---- Load specific execution ---- */
   const loadExecution = useCallback(async (id: string) => {
     try {
-      const res = await apiFetch(`/api/admin/ai/shadowgrok?executionId=${id}`)
+      const res = await apiFetch(`/api/admin/automation/ai/shadowgrok?executionId=${id}`)
       if (res.ok) {
         const data = await res.json()
         const exec = data.execution as Execution
@@ -268,7 +268,7 @@ export function ShadowGrokView() {
       if (textareaRef.current) textareaRef.current.style.height = "auto"
 
       try {
-        const res = await apiFetch("/api/admin/ai/shadowgrok/stream", {
+        const res = await apiFetch("/api/admin/automation/ai/shadowgrok/stream", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({

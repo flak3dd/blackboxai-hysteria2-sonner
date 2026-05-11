@@ -6,7 +6,7 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 /**
- * POST /api/admin/mail/smtp-configs/:id/test
+ * POST /api/admin/communication/mail/smtp-configs/:id/test
  * Test connection to a saved SMTP configuration
  */
 export async function POST(

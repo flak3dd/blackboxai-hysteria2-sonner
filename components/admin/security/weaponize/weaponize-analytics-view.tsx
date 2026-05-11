@@ -86,7 +86,7 @@ export function WeaponizeAnalyticsView() {
 
   const loadAnalytics = async (selectedPeriod: string = period) => {
     try {
-      const res = await fetch(`/api/admin/overview?period=${selectedPeriod}`, { cache: "no-store" })
+      const res = await fetch(`/api/admin/operations/overview?period=${selectedPeriod}`, { cache: "no-store" })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       if (data.analytics) {

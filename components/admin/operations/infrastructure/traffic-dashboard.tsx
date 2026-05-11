@@ -72,7 +72,7 @@ export function TrafficDashboard() {
 
   const fetchTrafficStatus = async () => {
     try {
-      const res = await apiFetch("/api/admin/infrastructure/traffic")
+      const res = await apiFetch("/api/admin/operations/infrastructure/traffic")
       if (res.ok) {
         const data = await res.json()
         setStatus(data.status)
@@ -100,7 +100,7 @@ export function TrafficDashboard() {
 
   const handleRouteTraffic = async (routeId: string) => {
     try {
-      const res = await apiFetch("/api/admin/infrastructure/traffic/route", {
+      const res = await apiFetch("/api/admin/operations/infrastructure/traffic/route", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ routeId }),
@@ -115,7 +115,7 @@ export function TrafficDashboard() {
 
   const handleCleanup = async () => {
     try {
-      const res = await apiFetch("/api/admin/infrastructure/traffic/cleanup", {
+      const res = await apiFetch("/api/admin/operations/infrastructure/traffic/cleanup", {
         method: "DELETE",
       })
       if (res.ok) {

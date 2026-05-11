@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  *
- * Unit tests for app/api/admin/payloads/route.ts
+ * Unit tests for app/api/admin/security/payloads/route.ts
  */
 
 jest.mock("@/lib/db/payload-builds", () => ({
@@ -12,7 +12,7 @@ jest.mock("@/lib/db/payload-builds", () => ({
   countPayloadBuilds: jest.fn(),
 }))
 
-import { GET, POST, DELETE } from "@/app/api/admin/payloads/route"
+import { GET, POST, DELETE } from "@/app/api/admin/security/payloads/route"
 import {
   listPayloadBuilds,
   createPayloadBuild,
@@ -46,7 +46,7 @@ const defaultStats = { total: 1, pending: 1, building: 0, ready: 0, failed: 0 }
 
 function makeRequest(opts: { url?: string; body?: unknown } = {}) {
   return {
-    url: opts.url ?? "http://localhost/api/admin/payloads",
+    url: opts.url ?? "http://localhost/api/admin/security/payloads",
     headers: { get: () => null },
     json: jest.fn().mockResolvedValue(opts.body ?? {}),
   } as any
@@ -55,9 +55,9 @@ function makeRequest(opts: { url?: string; body?: unknown } = {}) {
 beforeEach(() => jest.clearAllMocks())
 
 /* ------------------------------------------------------------------ */
-/*  GET /api/admin/payloads                                            */
+/*  GET /api/admin/security/payloads                                            */
 /* ------------------------------------------------------------------ */
-describe("GET /api/admin/payloads", () => {
+describe("GET /api/admin/security/payloads", () => {
   it("returns builds list, pagination, and stats", async () => {
     mockList.mockResolvedValue([makeBuild()])
     mockCount.mockResolvedValue(1)
@@ -78,7 +78,7 @@ describe("GET /api/admin/payloads", () => {
     mockCount.mockResolvedValue(0)
     mockStats.mockResolvedValue({ ...defaultStats, total: 0 })
 
-    const res = await GET(makeRequest({ url: "http://localhost/api/admin/payloads?createdBy=alice" }))
+    const res = await GET(makeRequest({ url: "http://localhost/api/admin/security/payloads?createdBy=alice" }))
     expect(res.status).toBe(200)
 
     // Ensure listPayloadBuilds was called with the createdBy arg
@@ -96,9 +96,9 @@ describe("GET /api/admin/payloads", () => {
 })
 
 /* ------------------------------------------------------------------ */
-/*  POST /api/admin/payloads                                           */
+/*  POST /api/admin/security/payloads                                           */
 /* ------------------------------------------------------------------ */
-describe("POST /api/admin/payloads", () => {
+describe("POST /api/admin/security/payloads", () => {
   const validBody = { name: "dropper", type: "exe", config: {} }
 
   it("creates a build and returns 201", async () => {
@@ -137,20 +137,20 @@ describe("POST /api/admin/payloads", () => {
 })
 
 /* ------------------------------------------------------------------ */
-/*  DELETE /api/admin/payloads?id=...                                  */
+/*  DELETE /api/admin/security/payloads?id=...                                  */
 /* ------------------------------------------------------------------ */
-describe("DELETE /api/admin/payloads", () => {
+describe("DELETE /api/admin/security/payloads", () => {
   it("deletes and returns success", async () => {
     mockDelete.mockResolvedValue(true)
 
-    const res = await DELETE(makeRequest({ url: "http://localhost/api/admin/payloads?id=pb1" }))
+    const res = await DELETE(makeRequest({ url: "http://localhost/api/admin/security/payloads?id=pb1" }))
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.success).toBe(true)
   })
 
   it("returns 400 when id param is missing", async () => {
-    const res = await DELETE(makeRequest({ url: "http://localhost/api/admin/payloads" }))
+    const res = await DELETE(makeRequest({ url: "http://localhost/api/admin/security/payloads" }))
     expect(res.status).toBe(400)
     const body = await res.json()
     expect(body.error).toMatch(/id/)
@@ -159,14 +159,14 @@ describe("DELETE /api/admin/payloads", () => {
   it("returns 404 when build not found", async () => {
     mockDelete.mockResolvedValue(false)
 
-    const res = await DELETE(makeRequest({ url: "http://localhost/api/admin/payloads?id=missing" }))
+    const res = await DELETE(makeRequest({ url: "http://localhost/api/admin/security/payloads?id=missing" }))
     expect(res.status).toBe(404)
   })
 
   it("returns 500 on unexpected error", async () => {
     mockDelete.mockRejectedValue(new Error("db error"))
 
-    const res = await DELETE(makeRequest({ url: "http://localhost/api/admin/payloads?id=pb1" }))
+    const res = await DELETE(makeRequest({ url: "http://localhost/api/admin/security/payloads?id=pb1" }))
     expect(res.status).toBe(500)
   })
 })

@@ -130,7 +130,7 @@ export default function ConfigAuditPage() {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch("/api/admin/config/audit", { cache: "no-store" })
+      const res = await fetch("/api/admin/configuration/config/audit", { cache: "no-store" })
       if (!res.ok) {
         const body = await res.json().catch(() => null)
         throw new Error(body?.message ?? `HTTP ${res.status}`)

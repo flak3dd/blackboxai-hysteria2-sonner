@@ -8,7 +8,7 @@ import { verifyAdmin, toErrorResponse } from "@/lib/auth/admin"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-// GET /api/admin/beacons - List beacons with filters
+// GET /api/admin/security/beacons - List beacons with filters
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     await verifyAdmin(req)
@@ -49,7 +49,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 }
 
-// POST /api/admin/beacons - Create a new beacon
+// POST /api/admin/security/beacons - Create a new beacon
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     await verifyAdmin(req)

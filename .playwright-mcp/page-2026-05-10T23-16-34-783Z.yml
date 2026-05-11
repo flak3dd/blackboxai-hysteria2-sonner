@@ -1,0 +1,161 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - link "D-Panel Operations Center" [ref=e5] [cursor=pointer]:
+        - /url: /admin
+        - img [ref=e7]
+        - generic [ref=e9]:
+          - generic [ref=e10]: D-Panel
+          - generic [ref=e11]: Operations Center
+      - separator [ref=e12]
+      - button [ref=e14]:
+        - img
+      - separator [ref=e15]
+      - link "Command Center" [ref=e17] [cursor=pointer]:
+        - /url: /admin
+        - img [ref=e18]
+        - generic [ref=e23]: Command Center
+      - navigation [ref=e25]:
+        - button "Recon" [ref=e27]:
+          - generic [ref=e30]: Recon
+          - img [ref=e31]
+        - button "Infrastructure" [ref=e34]:
+          - generic [ref=e37]: Infrastructure
+          - img [ref=e38]
+        - button "Weaponize" [ref=e41]:
+          - generic [ref=e44]: Weaponize
+          - img [ref=e45]
+        - button "Exploit" [ref=e48]:
+          - generic [ref=e51]: Exploit
+          - img [ref=e52]
+        - button "Deliver" [ref=e55]:
+          - generic [ref=e58]: Deliver
+          - img [ref=e59]
+        - generic [ref=e61]:
+          - button "Operate" [expanded] [ref=e62]:
+            - generic [ref=e65]: Operate
+            - img [ref=e66]
+          - generic [ref=e69]:
+            - link "Team Ops" [ref=e70] [cursor=pointer]:
+              - /url: /admin/coordination
+              - img [ref=e71]
+              - generic [ref=e76]: Team Ops
+            - link "Anti-Forensics" [ref=e77] [cursor=pointer]:
+              - /url: /admin/forensics
+              - img [ref=e78]
+              - generic [ref=e87]: Anti-Forensics
+            - link "AI Assistant" [ref=e88] [cursor=pointer]:
+              - /url: /admin/ai
+              - img [ref=e89]
+              - generic [ref=e92]: AI Assistant
+            - link "Workflow" [ref=e93] [cursor=pointer]:
+              - /url: /admin/workflow
+              - img [ref=e94]
+              - generic [ref=e98]: Workflow
+        - button "Report" [ref=e100]:
+          - generic [ref=e103]: Report
+          - img [ref=e104]
+      - separator [ref=e106]
+      - link "Settings" [ref=e108] [cursor=pointer]:
+        - /url: /admin/settings
+        - img [ref=e109]
+        - generic [ref=e112]: Settings
+    - generic [ref=e113]:
+      - banner [ref=e114]:
+        - navigation "breadcrumb" [ref=e115]:
+          - list [ref=e116]:
+            - listitem [ref=e117]:
+              - link "Command Center" [ref=e118] [cursor=pointer]:
+                - /url: /admin
+            - listitem [ref=e119]:
+              - img [ref=e120]
+            - listitem [ref=e122]:
+              - link "AI Assistant" [disabled] [ref=e123]
+        - generic [ref=e124]:
+          - button [ref=e125]:
+            - img
+          - button "A admin ADMIN" [ref=e126]:
+            - generic [ref=e128]: A
+            - generic [ref=e129]: admin
+            - generic [ref=e130]: ADMIN
+      - main [ref=e131]:
+        - generic [ref=e133]:
+          - generic [ref=e135]:
+            - generic [ref=e136]:
+              - img [ref=e138]
+              - generic [ref=e142]:
+                - heading "AI Assistant" [level=1] [ref=e143]
+                - paragraph [ref=e144]: Multi-tool agent · chat, ShadowGrok C2, reasoning traces, and settings.
+            - generic [ref=e145]:
+              - generic [ref=e146]: Online
+              - generic [ref=e148]:
+                - img [ref=e149]
+                - text: 10 tools
+          - generic [ref=e151]:
+            - tablist [ref=e153]:
+              - tab "AI Chat" [selected] [ref=e154]:
+                - img
+                - text: AI Chat
+              - tab "ShadowGrok" [ref=e155]:
+                - img
+                - text: ShadowGrok
+              - tab "Reasoning" [ref=e156]:
+                - img
+                - text: Reasoning
+              - tab "Settings" [ref=e157]:
+                - img
+                - text: Settings
+            - tabpanel [ref=e158]:
+              - generic [ref=e160]:
+                - generic [ref=e161]:
+                  - button "New Conversation" [ref=e162]:
+                    - img
+                    - text: New Conversation
+                  - generic [ref=e163]:
+                    - generic [ref=e164]:
+                      - img [ref=e165]
+                      - textbox "Search conversations…" [ref=e168]
+                    - generic [ref=e169]:
+                      - button "All" [ref=e170]
+                      - button "Recent" [ref=e171]
+                      - button "Tools" [ref=e172]
+                      - button "Tag" [ref=e173]
+                - generic [ref=e184]:
+                  - generic [ref=e185]:
+                    - generic [ref=e186]:
+                      - button [ref=e187]:
+                        - img
+                      - generic [ref=e189]: No conversation selected
+                    - generic [ref=e190]:
+                      - button [ref=e191]:
+                        - img
+                      - button [ref=e192]:
+                        - img
+                  - generic [ref=e195]:
+                    - img [ref=e199]
+                    - generic [ref=e202]:
+                      - heading "How can I help today?" [level=3] [ref=e203]
+                      - paragraph [ref=e204]: Pick a starter prompt or begin a new conversation. The assistant has access to 10 tools for config, traffic, troubleshooting, and payload operations.
+                    - button "Start Blank Conversation" [active] [ref=e205]:
+                      - img
+                      - text: Start Blank Conversation
+                    - button "Open Build & Deploy Guide" [ref=e206]:
+                      - img
+                      - text: Open Build & Deploy Guide
+                  - generic [ref=e207]:
+                    - generic [ref=e208]:
+                      - combobox [ref=e209]:
+                        - generic [ref=e210]: auto
+                        - img: ▼
+                      - textbox [ref=e211]: auto
+                      - generic [ref=e212]: AI Provider
+                    - generic [ref=e213]:
+                      - textbox "Type a message to start a new conversation…" [ref=e214]: Deploy a new Azure VM with provider azure, region australiaeast, resourceGroup hysteria-rg-australiaeast, name hysteria-au-01, tags [c2, azure, australiaeast]. First check prerequisites, then proceed with deployment.
+                      - button [disabled]:
+                        - img
+                    - generic [ref=e215]:
+                      - generic [ref=e216]: Enter send · Shift+Enter newline
+                      - generic [ref=e217]:
+                        - img [ref=e218]
+                        - text: 10 tools available
+  - region "Notifications alt+T"

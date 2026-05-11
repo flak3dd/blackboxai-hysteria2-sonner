@@ -178,7 +178,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json({
       endpoints: {
-        POST: "/api/admin/mail/bulk-send",
+        POST: "/api/admin/communication/mail/bulk-send",
       },
       limits: {
         maxRecords: 100000,

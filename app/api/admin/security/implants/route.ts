@@ -20,7 +20,7 @@ const ImplantCreateSchema = z.object({
   nodeId: z.string().optional(),
 })
 
-// GET /api/admin/implants - List implants (paginated)
+// GET /api/admin/security/implants - List implants (paginated)
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     await verifyAdmin(req)
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 }
 
-// POST /api/admin/implants - Create a new implant record
+// POST /api/admin/security/implants - Create a new implant record
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     await verifyAdmin(req)

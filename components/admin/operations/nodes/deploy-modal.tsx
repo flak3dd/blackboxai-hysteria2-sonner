@@ -63,7 +63,7 @@ export function DeployModal({ onClose, onDeployed }: { onClose: () => void; onDe
 
   const loadPresets = useCallback(async () => {
     try {
-      const res = await apiFetch("/api/admin/deploy/presets", { cache: "no-store" })
+      const res = await apiFetch("/api/admin/operations/deploy/presets", { cache: "no-store" })
       if (res.ok) {
         const data = await res.json()
         setPresets(data.presets ?? [])
@@ -106,7 +106,7 @@ export function DeployModal({ onClose, onDeployed }: { onClose: () => void; onDe
     })
     
     try {
-      const res = await apiFetch("/api/admin/deploy/batch", {
+      const res = await apiFetch("/api/admin/operations/deploy/batch", {
         method: "POST",
         headers: { "content-type": "application/json" },
       })
@@ -148,7 +148,7 @@ export function DeployModal({ onClose, onDeployed }: { onClose: () => void; onDe
 
     try {
       const panelUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000")
-      const res = await apiFetch("/api/admin/deploy", {
+      const res = await apiFetch("/api/admin/operations/deploy", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -179,7 +179,7 @@ export function DeployModal({ onClose, onDeployed }: { onClose: () => void; onDe
       setDeployId(id)
 
       // Subscribe to SSE stream
-      const sse = new EventSource(`/api/admin/deploy/${id}/stream`)
+      const sse = new EventSource(`/api/admin/operations/deploy/${id}/stream`)
       sse.onmessage = (event) => {
         try {
           const step = JSON.parse(event.data)
@@ -212,7 +212,7 @@ export function DeployModal({ onClose, onDeployed }: { onClose: () => void; onDe
   const destroy = async () => {
     if (!deployId) return
     try {
-      await apiFetch(`/api/admin/deploy/${deployId}/destroy`, { method: "POST" })
+      await apiFetch(`/api/admin/operations/deploy/${deployId}/destroy`, { method: "POST" })
       toast.success("VPS destroyed")
       onClose()
     } catch (err) {

@@ -14,9 +14,9 @@ import logger from "@/lib/logger"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-const log = logger.child({ module: "api/admin/lateral-movement" })
+const log = logger.child({ module: "api/admin/security/lateral-movement" })
 
-// GET /api/admin/lateral-movement - List lateral movements with filters
+// GET /api/admin/security/lateral-movement - List lateral movements with filters
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     await verifyAdmin(req)
@@ -60,7 +60,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 }
 
-// POST /api/admin/lateral-movement - Create a new lateral movement
+// POST /api/admin/security/lateral-movement - Create a new lateral movement
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     await verifyAdmin(req)

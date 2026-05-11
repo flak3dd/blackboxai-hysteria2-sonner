@@ -1,4 +1,4 @@
-import { MailTestView } from "@/components/admin/mail/mail-test-view"
+import { MailTestView } from "@/components/admin/communication/mail/mail-test-view"
 
 export const dynamic = "force-dynamic"
 

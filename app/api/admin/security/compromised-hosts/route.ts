@@ -23,7 +23,7 @@ const CreateSchema = z.object({
   implantId: z.string().optional(),
 })
 
-// GET /api/admin/compromised-hosts
+// GET /api/admin/security/compromised-hosts
 export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     await verifyAdmin(req)
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 }
 
-// POST /api/admin/compromised-hosts
+// POST /api/admin/security/compromised-hosts
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     await verifyAdmin(req)

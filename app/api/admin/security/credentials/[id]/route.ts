@@ -5,7 +5,7 @@ import { verifyAdmin, toErrorResponse } from "@/lib/auth/admin"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-// GET /api/admin/credentials/[id] - Get credential details
+// GET /api/admin/security/credentials/[id] - Get credential details
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -25,7 +25,7 @@ export async function GET(
   }
 }
 
-// DELETE /api/admin/credentials/[id] - Delete credential
+// DELETE /api/admin/security/credentials/[id] - Delete credential
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

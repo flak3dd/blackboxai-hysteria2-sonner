@@ -11,7 +11,7 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 /**
- * GET /api/admin/mail/smtp-configs/:id
+ * GET /api/admin/communication/mail/smtp-configs/:id
  * Get a single SMTP configuration by ID
  */
 export async function GET(
@@ -35,7 +35,7 @@ export async function GET(
 }
 
 /**
- * PATCH /api/admin/mail/smtp-configs/:id
+ * PATCH /api/admin/communication/mail/smtp-configs/:id
  * Update an existing SMTP configuration
  */
 export async function PATCH(
@@ -61,7 +61,7 @@ export async function PATCH(
 }
 
 /**
- * DELETE /api/admin/mail/smtp-configs/:id
+ * DELETE /api/admin/communication/mail/smtp-configs/:id
  * Delete an SMTP configuration
  */
 export async function DELETE(

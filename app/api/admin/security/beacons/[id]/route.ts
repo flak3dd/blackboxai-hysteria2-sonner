@@ -6,7 +6,7 @@ import { verifyAdmin, toErrorResponse } from "@/lib/auth/admin"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-// GET /api/admin/beacons/[id] - Get beacon details
+// GET /api/admin/security/beacons/[id] - Get beacon details
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -26,7 +26,7 @@ export async function GET(
   }
 }
 
-// PATCH /api/admin/beacons/[id] - Update beacon
+// PATCH /api/admin/security/beacons/[id] - Update beacon
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -56,7 +56,7 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/admin/beacons/[id] - Delete beacon
+// DELETE /api/admin/security/beacons/[id] - Delete beacon
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

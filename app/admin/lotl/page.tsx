@@ -1,4 +1,4 @@
-import { LotlArsenalView } from "@/components/admin/lotl/lotl-arsenal-view"
+import { LotlArsenalView } from "@/components/admin/security/lotl/lotl-arsenal-view"
 
 export const dynamic = "force-dynamic"
 

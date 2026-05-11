@@ -12,7 +12,7 @@ import { verifyAdmin, toErrorResponse } from "@/lib/auth/admin"
 import { reasoningTraceSystem } from '@/lib/ai/reasoning/reasoning-trace'
 
 /**
- * GET /api/admin/reasoning/traces/[traceId]
+ * GET /api/admin/automation/reasoning/traces/[traceId]
  * Get a specific reasoning trace by ID
  */
 export async function GET(

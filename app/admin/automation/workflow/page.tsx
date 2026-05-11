@@ -1,4 +1,4 @@
-import { WorkflowChat } from '@/components/admin/workflow/workflow-chat'
+import { WorkflowChat } from '@/components/admin/intelligence/workflow/workflow-chat'
 import { Workflow, Sparkles } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 

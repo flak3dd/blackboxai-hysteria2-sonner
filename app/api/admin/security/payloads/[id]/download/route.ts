@@ -8,7 +8,7 @@ import { existsSync } from "fs"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-// GET /api/admin/payloads/[id]/download - Download a compiled payload
+// GET /api/admin/security/payloads/[id]/download - Download a compiled payload
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

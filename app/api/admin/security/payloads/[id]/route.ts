@@ -5,7 +5,7 @@ import { verifyAdmin, toErrorResponse } from "@/lib/auth/admin"
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
-// GET /api/admin/payloads/[id] - Get a specific payload build
+// GET /api/admin/security/payloads/[id] - Get a specific payload build
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -24,7 +24,7 @@ export async function GET(
   }
 }
 
-// PATCH /api/admin/payloads/[id] - Update a payload build
+// PATCH /api/admin/security/payloads/[id] - Update a payload build
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -44,7 +44,7 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/admin/payloads/[id] - Delete a payload build
+// DELETE /api/admin/security/payloads/[id] - Delete a payload build
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

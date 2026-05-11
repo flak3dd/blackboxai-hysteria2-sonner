@@ -1,4 +1,4 @@
-import { NetworkMapView } from "@/components/admin/network/network-map-view"
+import { NetworkMapView } from "@/components/admin/operations/network/network-map-view"
 
 export const dynamic = "force-dynamic"
 
