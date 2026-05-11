@@ -306,7 +306,7 @@ export function validatePowerShellScript(script: string): {
     if (pattern.test(script)) {
       issues.push(message)
     }
-  }
+  })
 
   return {
     safe: issues.length === 0,

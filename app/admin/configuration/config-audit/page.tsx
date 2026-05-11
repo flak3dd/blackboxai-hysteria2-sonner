@@ -5,7 +5,9 @@ import { toast } from "sonner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { Download, History, RefreshCw } from "lucide-react"
 
 /* ------------------------------------------------------------------ */
 /*  Types (mirrors lib/config-audit/analyzer.ts)                       */
@@ -39,6 +41,26 @@ type AuditResult = {
     info: number
   }
   auditedAt: number
+  auditType: "security" | "performance" | "compliance" | "full"
+}
+
+type AuditHistoryEntry = {
+  id: string
+  operatorId: string
+  action: string
+  resource: string
+  details: {
+    auditType: string
+    score: number
+    timestamp: string
+  }
+  ipAddress: string | null
+  userAgent: string | null
+  createdAt: string
+  operator: {
+    id: string
+    username: string
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -125,17 +147,30 @@ export default function ConfigAuditPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<"all" | "failed" | "passed">("all")
+  const [auditType, setAuditType] = useState<"security" | "performance" | "compliance" | "full">("full")
+  const [showHistory, setShowHistory] = useState(false)
+  const [history, setHistory] = useState<AuditHistoryEntry[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
 
-  const runAudit = useCallback(async () => {
+  const runAudit = useCallback(async (type: "security" | "performance" | "compliance" | "full" = "full") => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch("/api/admin/configuration/config/audit", { cache: "no-store" })
+      const res = await fetch("/api/admin/configuration/config/audit", {
+        method: "POST",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "full",
+          auditType: type,
+          config: {}, // Will be populated with actual config in production
+        }),
+      })
       if (!res.ok) {
         const body = await res.json().catch(() => null)
         throw new Error(body?.message ?? `HTTP ${res.status}`)
       }
-      const data: AuditResult = await res.json()
+      const data: AuditResult = await res.json().result
       setResult(data)
       toast.success("Config audit complete", {
         description: `Score: ${data.score}/100 (${data.grade})`,
@@ -149,13 +184,58 @@ export default function ConfigAuditPage() {
     }
   }, [])
 
+  const fetchHistory = useCallback(async () => {
+    setHistoryLoading(true)
+    try {
+      const res = await fetch("/api/admin/configuration/config/audit?limit=20&offset=0", { cache: "no-store" })
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        throw new Error(body?.message ?? `HTTP ${res.status}`)
+      }
+      const data = await res.json()
+      setHistory(data.data || [])
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error"
+      toast.error("Failed to fetch history", { description: msg })
+    } finally {
+      setHistoryLoading(false)
+    }
+  }, [])
+
+  const exportReport = useCallback(() => {
+    if (!result) return
+
+    const report = {
+      auditType: result.auditType,
+      score: result.score,
+      grade: result.grade,
+      auditedAt: new Date(result.auditedAt).toISOString(),
+      summary: result.summary,
+      findings: result.findings,
+    }
+
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `audit-report-${new Date(result.auditedAt).toISOString().split("T")[0]}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+
+    toast.success("Report exported", {
+      description: "Audit report has been downloaded",
+    })
+  }, [result])
+
   const didMount = useRef(false)
   useEffect(() => {
     if (!didMount.current) {
       didMount.current = true
-      void runAudit()
+      void fetchHistory()
     }
-  })
+  }, [fetchHistory])
 
   const filteredFindings = result?.findings
     .filter((f) => {
@@ -178,9 +258,33 @@ export default function ConfigAuditPage() {
             Analyze your server configuration for security weaknesses and best practices.
           </p>
         </div>
-        <Button onClick={runAudit} disabled={loading}>
-          {loading ? "Auditing..." : "Run Audit"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Select value={auditType} onValueChange={(v: any) => setAuditType(v)}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="full">Full Audit</SelectItem>
+              <SelectItem value="security">Security</SelectItem>
+              <SelectItem value="performance">Performance</SelectItem>
+              <SelectItem value="compliance">Compliance</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button onClick={() => runAudit(auditType)} disabled={loading}>
+            <RefreshCw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
+            {loading ? "Auditing..." : "Run Audit"}
+          </Button>
+          {result && (
+            <Button variant="outline" onClick={exportReport}>
+              <Download className="mr-2 h-4 w-4" />
+              Export
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => setShowHistory(!showHistory)}>
+            <History className="mr-2 h-4 w-4" />
+            History
+          </Button>
+        </div>
       </div>
 
       {/* Error state */}
@@ -222,7 +326,7 @@ export default function ConfigAuditPage() {
                   <CardTitle className="text-sm">Findings</CardTitle>
                   <CardDescription className="text-xs">
                     {result.summary.total} checks &middot; audited{" "}
-                    {new Date(result.auditedAt).toLocaleTimeString()}
+                    {new Date(result.auditedAt).toLocaleTimeString()} &middot; Type: {result.auditType}
                   </CardDescription>
                 </div>
                 <div className="flex gap-1">
@@ -275,6 +379,47 @@ export default function ConfigAuditPage() {
             </CardContent>
           </Card>
         </>
+      )}
+
+      {/* Audit History */}
+      {showHistory && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Audit History</CardTitle>
+            <CardDescription className="text-xs">
+              Recent configuration audits and their results
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {historyLoading ? (
+              <p className="py-4 text-center text-xs text-muted-foreground">Loading history...</p>
+            ) : history.length === 0 ? (
+              <p className="py-4 text-center text-xs text-muted-foreground">No audit history found.</p>
+            ) : (
+              <div className="space-y-2">
+                {history.map((entry) => (
+                  <div key={entry.id} className="rounded-lg border p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">{entry.details.auditType} audit</span>
+                        <Badge variant="outline" className="text-[10px]">
+                          Score: {entry.details.score}
+                        </Badge>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground">
+                        {new Date(entry.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>By {entry.operator.username}</span>
+                      {entry.ipAddress && <span>&middot; {entry.ipAddress}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
     </div>
   )

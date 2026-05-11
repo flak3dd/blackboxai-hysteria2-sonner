@@ -124,13 +124,38 @@ export function MailTestView() {
 
   // Template editor state
   const [activeTab, setActiveTab] = useState("accounts")
-  const [templates, setTemplates] = useState<Array<{id: string; name: string; subject: string; htmlContent: string; textContent: string; variables?: string[]}>>([])
-  const [selectedTemplate, setSelectedTemplate] = useState<{id: string; name: string; subject: string; htmlContent: string; textContent: string; variables?: string[]} | null>(null)
+  const [templates, setTemplates] = useState<Array<{id: string; name: string; subject: string; htmlContent: string; textContent: string; variables?: string[]; category?: string; version?: number}>>([])
+  const [selectedTemplate, setSelectedTemplate] = useState<{id: string; name: string; subject: string; htmlContent: string; textContent: string; variables?: string[]; category?: string; version?: number} | null>(null)
   const [templateName, setTemplateName] = useState("")
   const [templateSubject, setTemplateSubject] = useState("")
   const [templateHtml, setTemplateHtml] = useState("")
   const [templateText, setTemplateText] = useState("")
   const [templateVariables, setTemplateVariables] = useState<string[]>([])
+  const [templateCategory, setTemplateCategory] = useState("general")
+  const [templateDescription, setTemplateDescription] = useState("")
+  const [templateTags, setTemplateTags] = useState<string[]>([])
+  const [templateTagInput, setTemplateTagInput] = useState("")
+  const [showPreview, setShowPreview] = useState(false)
+  const [previewVariables, setPreviewVariables] = useState<Record<string, string>>({})
+  const [previewHtml, setPreviewHtml] = useState("")
+  const [templateVersions, setTemplateVersions] = useState<Array<{id: string; version: number; createdAt: string; changelog?: string}>>([])
+  const [showVersions, setShowVersions] = useState(false)
+
+  // Attachment manager state
+  const [attachments, setAttachments] = useState<Array<{id: string; filename: string; size: number; contentType: string}>>([])
+
+  // Tracking configuration state
+  const [trackingEnabled, setTrackingEnabled] = useState(false)
+  const [trackingDomain, setTrackingDomain] = useState("")
+  const [trackOpens, setTrackOpens] = useState(true)
+  const [trackClicks, setTrackClicks] = useState(true)
+
+  // Campaign management state
+  const [campaignId, setCampaignId] = useState("")
+  const [campaigns, setCampaigns] = useState<Array<{id: string; name: string; status: string}>>([])
+
+  // Analytics dashboard state
+  const [analytics, setAnalytics] = useState<{openRate: number; clickRate: number; totalOpens: number; totalClicks: number} | null>(null)
 
   // Queue state
   const [queueStats, setQueueStats] = useState<{pending: number; processing: number; sent: number; failed: number; total: number} | null>(null)
@@ -516,6 +541,9 @@ export function MailTestView() {
           htmlContent: templateHtml,
           textContent: templateText,
           variables: templateVariables,
+          category: templateCategory,
+          description: templateDescription,
+          tags: templateTags,
         }),
       })
       if (!res.ok) throw new Error("Failed to save template")
@@ -527,10 +555,13 @@ export function MailTestView() {
       setTemplateHtml("")
       setTemplateText("")
       setTemplateVariables([])
+      setTemplateCategory("general")
+      setTemplateDescription("")
+      setTemplateTags([])
     } catch {
       toast.error("Failed to save template")
     }
-  }, [selectedTemplate, templateName, templateSubject, templateHtml, templateText, templateVariables, loadTemplates])
+  }, [selectedTemplate, templateName, templateSubject, templateHtml, templateText, templateVariables, templateCategory, templateDescription, templateTags, loadTemplates])
 
   const deleteTemplate = useCallback(async (id: string) => {
     try {
@@ -565,6 +596,100 @@ export function MailTestView() {
       console.error("Failed to extract variables")
     }
   }, [templateHtml, templateText, templateSubject])
+
+  const loadTemplateVersions = useCallback(async (templateId: string) => {
+    try {
+      const res = await apiFetch(`/api/admin/communication/mail/templates?id=${templateId}&action=versions`, { cache: "no-store" })
+      if (res.ok) {
+        const data = await res.json()
+        setTemplateVersions(data.versions || [])
+      }
+    } catch {
+      toast.error("Failed to load template versions")
+    }
+  }, [])
+
+  const previewTemplate = useCallback(async () => {
+    try {
+      const res = await apiFetch("/api/admin/communication/mail/templates", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          action: "preview-content",
+          htmlContent: templateHtml,
+          textContent: templateText,
+          subject: templateSubject,
+          variables: previewVariables,
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setPreviewHtml(data.rendered.htmlContent)
+        setShowPreview(true)
+      }
+    } catch {
+      toast.error("Failed to preview template")
+    }
+  }, [templateHtml, templateText, templateSubject, previewVariables])
+
+  const addTemplateTag = useCallback(() => {
+    if (templateTagInput.trim() && !templateTags.includes(templateTagInput.trim())) {
+      setTemplateTags([...templateTags, templateTagInput.trim()])
+      setTemplateTagInput("")
+    }
+  }, [templateTagInput, templateTags])
+
+  const removeTemplateTag = useCallback((tag: string) => {
+    setTemplateTags(templateTags.filter(t => t !== tag))
+  }, [templateTags])
+
+  const handleAttachmentUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const base64 = event.target?.result as string
+      const attachment = {
+        id: `att_${Date.now()}`,
+        filename: file.name,
+        size: file.size,
+        contentType: file.type,
+        content: base64.split(',')[1], // Remove data URL prefix
+      }
+      setAttachments([...attachments, attachment])
+      toast.success("Attachment added", { description: file.name })
+    }
+    reader.readAsDataURL(file)
+  }, [attachments])
+
+  const removeAttachment = useCallback((id: string) => {
+    setAttachments(attachments.filter(a => a.id !== id))
+  }, [attachments])
+
+  const loadCampaigns = useCallback(async () => {
+    try {
+      const res = await apiFetch("/api/admin/communication/mail/campaigns", { cache: "no-store" })
+      if (res.ok) {
+        const data = await res.json()
+        setCampaigns(data.campaigns || [])
+      }
+    } catch {
+      // Silently fail, not critical
+    }
+  }, [])
+
+  const loadAnalytics = useCallback(async () => {
+    try {
+      const res = await apiFetch("/api/admin/communication/mail/analytics", { cache: "no-store" })
+      if (res.ok) {
+        const data = await res.json()
+        setAnalytics(data.analytics || null)
+      }
+    } catch {
+      // Silently fail, not critical
+    }
+  }, [])
 
   /* ---- Queue functions ---- */
   const loadQueueData = useCallback(async () => {
@@ -654,6 +779,8 @@ export function MailTestView() {
         }
         loadTemplates()
         loadSmtpConfigsList()
+        loadCampaigns()
+        loadAnalytics()
       } catch (err) {
         toast.error("Failed to load mail data", {
           description: err instanceof Error ? err.message : "unknown",
@@ -663,7 +790,7 @@ export function MailTestView() {
       }
     }
     load()
-  }, [loadTemplates, loadSmtpConfigsList])
+  }, [loadTemplates, loadSmtpConfigsList, loadCampaigns, loadAnalytics])
 
   if (loading) {
     return <p className="p-6 text-muted-foreground">Loading mail accounts...</p>
@@ -679,13 +806,14 @@ export function MailTestView() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="accounts">Accounts</TabsTrigger>
           <TabsTrigger value="smtp-configs">SMTP Configs</TabsTrigger>
           <TabsTrigger value="templates">Templates</TabsTrigger>
           <TabsTrigger value="queue">Queue</TabsTrigger>
           <TabsTrigger value="tracking">Tracking</TabsTrigger>
           <TabsTrigger value="bounce">Bounce</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
         <TabsContent value="accounts" className="space-y-6">
@@ -1466,120 +1594,257 @@ export function MailTestView() {
         </TabsContent>
 
         <TabsContent value="templates" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Email Template Editor</CardTitle>
-              <CardDescription className="text-xs">
-                Create and manage email templates with variable substitution
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Template name"
-                  value={templateName}
-                  onChange={(e) => setTemplateName(e.target.value)}
-                  className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm"
-                />
-                <Button onClick={extractTemplateVariables} variant="outline" size="sm">
-                  Extract Variables
-                </Button>
-                <Button onClick={saveTemplate} size="sm">
-                  Save Template
-                </Button>
-              </div>
+          <div className="grid gap-6 xl:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Email Template Editor</CardTitle>
+                <CardDescription className="text-xs">
+                  Create and manage email templates with variable substitution
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    placeholder="Template name"
+                    value={templateName}
+                    onChange={(e) => setTemplateName(e.target.value)}
+                    className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                  />
+                  <select
+                    value={templateCategory}
+                    onChange={(e) => setTemplateCategory(e.target.value)}
+                    className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="general">General</option>
+                    <option value="marketing">Marketing</option>
+                    <option value="transactional">Transactional</option>
+                    <option value="newsletter">Newsletter</option>
+                    <option value="notification">Notification</option>
+                  </select>
+                </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Subject</label>
-                <input
-                  type="text"
-                  placeholder="Email subject with {{variable}} placeholders"
-                  value={templateSubject}
-                  onChange={(e) => setTemplateSubject(e.target.value)}
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">HTML Content</label>
-                  <textarea
-                    placeholder="<html><body>Hello {{name}},...</body></html>"
-                    value={templateHtml}
-                    onChange={(e) => setTemplateHtml(e.target.value)}
-                    rows={12}
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-mono"
+                  <label className="text-xs font-medium text-muted-foreground">Description</label>
+                  <input
+                    type="text"
+                    placeholder="Template description"
+                    value={templateDescription}
+                    onChange={(e) => setTemplateDescription(e.target.value)}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
                   />
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Text Content</label>
-                  <textarea
-                    placeholder="Hello {{name}},..."
-                    value={templateText}
-                    onChange={(e) => setTemplateText(e.target.value)}
-                    rows={12}
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-mono"
-                  />
-                </div>
-              </div>
 
-              {templateVariables.length > 0 && (
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Detected Variables</label>
-                  <div className="flex flex-wrap gap-2">
-                    {templateVariables.map((v) => (
-                      <Badge key={v} variant="secondary" className="text-xs">
-                        {`{{${v}}}`}
-                      </Badge>
-                    ))}
-                  </div>
+                  <label className="text-xs font-medium text-muted-foreground">Tags</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Add tag"
+                      value={templateTagInput}
+                      onChange={(e) => setTemplateTagInput(e.target.value)}
+                      onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addTemplateTag())}
+                      className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    />
+                    <Button onClick={addTemplateTag} variant="outline" size="sm">
+                  Add
+                </Button>
+              </div>
+              {templateTags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {templateTags.map((tag) => (
+                    <Badge key={tag} variant="secondary" className="text-xs">
+                      {tag}
+                      <button
+                        onClick={() => removeTemplateTag(tag)}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  ))}
                 </div>
               )}
+            </div>
 
-              <div className="border-t pt-4">
-                <h4 className="text-sm font-medium mb-2">Saved Templates</h4>
-                <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                  {templates.length === 0 ? (
-                    <p className="text-xs text-muted-foreground">No templates saved yet.</p>
-                  ) : (
-                    templates.map((t) => (
-                      <div key={t.id} className="flex items-center justify-between p-2 rounded border">
-                        <div>
-                          <p className="text-sm font-medium">{t.name}</p>
-                          <p className="text-xs text-muted-foreground">{t.subject}</p>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedTemplate(t)
-                              setTemplateName(t.name)
-                              setTemplateSubject(t.subject)
-                              setTemplateHtml(t.htmlContent)
-                              setTemplateText(t.textContent)
-                              setTemplateVariables(t.variables || [])
-                            }}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => deleteTemplate(t.id)}
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  )}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Subject</label>
+              <input
+                type="text"
+                placeholder="Email subject with {{variable}} placeholders"
+                value={templateSubject}
+                onChange={(e) => setTemplateSubject(e.target.value)}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">HTML Content</label>
+                <textarea
+                  placeholder="<html><body>Hello {{name}},...</body></html>"
+                  value={templateHtml}
+                  onChange={(e) => setTemplateHtml(e.target.value)}
+                  rows={10}
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-mono"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Text Content</label>
+                <textarea
+                  placeholder="Hello {{name}},..."
+                  value={templateText}
+                  onChange={(e) => setTemplateText(e.target.value)}
+                  rows={10}
+                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-mono"
+                />
+              </div>
+            </div>
+
+            {templateVariables.length > 0 && (
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Detected Variables</label>
+                <div className="flex flex-wrap gap-2">
+                  {templateVariables.map((v) => (
+                    <Badge key={v} variant="secondary" className="text-xs">
+                      {`{{${v}}}`}
+                    </Badge>
+                  ))}
                 </div>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button onClick={extractTemplateVariables} variant="outline" size="sm">
+                Extract Variables
+              </Button>
+              <Button onClick={previewTemplate} variant="outline" size="sm">
+                Preview
+              </Button>
+              <Button onClick={saveTemplate} size="sm" className="flex-1">
+                Save Template
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {showPreview && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Template Preview</CardTitle>
+              <CardDescription className="text-xs">
+                Preview with sample variables
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 mb-4">
+                <label className="text-xs font-medium text-muted-foreground">Preview Variables</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    placeholder="{{firstName}}"
+                    value={previewVariables.firstName || ""}
+                    onChange={(e) => setPreviewVariables({...previewVariables, firstName: e.target.value})}
+                    className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                  />
+                  <input
+                    type="text"
+                    placeholder="{{lastName}}"
+                    value={previewVariables.lastName || ""}
+                    onChange={(e) => setPreviewVariables({...previewVariables, lastName: e.target.value})}
+                    className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                  />
+                  <input
+                    type="text"
+                    placeholder="{{email}}"
+                    value={previewVariables.email || ""}
+                    onChange={(e) => setPreviewVariables({...previewVariables, email: e.target.value})}
+                    className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                  />
+                  <Button onClick={previewTemplate} variant="outline" size="sm">
+                    Update Preview
+                  </Button>
+                </div>
+              </div>
+              <div className="border rounded-md p-4 bg-background">
+                <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Saved Templates</CardTitle>
+            <CardDescription className="text-xs">
+              {templates.length} template{templates.length !== 1 && "s"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              {templates.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No templates saved yet.</p>
+              ) : (
+                templates.map((t) => (
+                  <div key={t.id} className="flex items-center justify-between p-3 rounded border">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium">{t.name}</p>
+                        <Badge variant="outline" className="text-[10px]">
+                          {t.category || "general"}
+                        </Badge>
+                        {t.version && (
+                          <Badge variant="secondary" className="text-[10px]">
+                            v{t.version}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{t.subject}</p>
+                      {t.tags && t.tags.length > 0 && (
+                        <div className="flex gap-1 mt-1">
+                          {t.tags.map((tag) => (
+                            <Badge key={tag} variant="secondary" className="text-[10px]">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedTemplate(t)
+                          setTemplateName(t.name)
+                          setTemplateSubject(t.subject)
+                          setTemplateHtml(t.htmlContent)
+                          setTemplateText(t.textContent)
+                          setTemplateVariables(t.variables || [])
+                          setTemplateCategory(t.category || "general")
+                          setTemplateDescription(t.description || "")
+                          setTemplateTags(t.tags || [])
+                          loadTemplateVersions(t.id)
+                        }}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => deleteTemplate(t.id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </TabsContent>
 
         <TabsContent value="queue" className="space-y-6">
           <div className="grid gap-6 xl:grid-cols-2">
@@ -1785,6 +2050,155 @@ export function MailTestView() {
                     </div>
                   ))}
                 </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-6">
+          <div className="grid gap-6 xl:grid-cols-3">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Email Performance</CardTitle>
+                <CardDescription className="text-xs">Overall email metrics</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {analytics ? (
+                  <div className="space-y-4">
+                    <div className="rounded-md bg-muted p-3">
+                      <p className="text-2xl font-bold">{analytics.totalOpens}</p>
+                      <p className="text-xs text-muted-foreground">Total Opens</p>
+                    </div>
+                    <div className="rounded-md bg-blue-500/10 p-3">
+                      <p className="text-2xl font-bold text-blue-600">{analytics.openRate.toFixed(1)}%</p>
+                      <p className="text-xs text-muted-foreground">Open Rate</p>
+                    </div>
+                    <div className="rounded-md bg-emerald-500/10 p-3">
+                      <p className="text-2xl font-bold text-emerald-600">{analytics.totalClicks}</p>
+                      <p className="text-xs text-muted-foreground">Total Clicks</p>
+                    </div>
+                    <div className="rounded-md bg-purple-500/10 p-3">
+                      <p className="text-2xl font-bold text-purple-600">{analytics.clickRate.toFixed(1)}%</p>
+                      <p className="text-xs text-muted-foreground">Click Rate</p>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Loading analytics...</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="xl:col-span-2">
+              <CardHeader>
+                <CardTitle className="text-sm">Tracking Configuration</CardTitle>
+                <CardDescription className="text-xs">Configure email tracking settings</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Enable Tracking</label>
+                  <input
+                    type="checkbox"
+                    checked={trackingEnabled}
+                    onChange={(e) => setTrackingEnabled(e.target.checked)}
+                    className="accent-primary"
+                  />
+                </div>
+
+                {trackingEnabled && (
+                  <>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-muted-foreground">Tracking Domain</label>
+                      <input
+                        type="url"
+                        placeholder="https://yourdomain.com"
+                        value={trackingDomain}
+                        onChange={(e) => setTrackingDomain(e.target.value)}
+                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">Track Opens</label>
+                      <input
+                        type="checkbox"
+                        checked={trackOpens}
+                        onChange={(e) => setTrackOpens(e.target.checked)}
+                        className="accent-primary"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium">Track Clicks</label>
+                      <input
+                        type="checkbox"
+                        checked={trackClicks}
+                        onChange={(e) => setTrackClicks(e.target.checked)}
+                        className="accent-primary"
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Campaign</label>
+                  <select
+                    value={campaignId}
+                    onChange={(e) => setCampaignId(e.target.value)}
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="">No Campaign</option>
+                    {campaigns.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} ({c.status})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">Attachment Manager</CardTitle>
+              <CardDescription className="text-xs">Manage attachments for bulk emails</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-2">
+                <input
+                  type="file"
+                  onChange={handleAttachmentUpload}
+                  className="text-xs file:mr-2 file:rounded-md file:border file:border-border file:bg-muted file:px-2 file:py-1 file:text-xs"
+                />
+              </div>
+
+              {attachments.length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground">Attached Files</label>
+                  <div className="space-y-2">
+                    {attachments.map((att) => (
+                      <div key={att.id} className="flex items-center justify-between p-2 rounded border">
+                        <div>
+                          <p className="text-sm font-medium">{att.filename}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {(att.size / 1024).toFixed(1)} KB • {att.contentType}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => removeAttachment(att.id)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {attachments.length === 0 && (
+                <p className="text-xs text-muted-foreground">No attachments added.</p>
               )}
             </CardContent>
           </Card>

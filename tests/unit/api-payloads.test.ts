@@ -2,6 +2,7 @@
  * @jest-environment node
  *
  * Unit tests for app/api/admin/security/payloads/route.ts
+ * Enhanced tests for Phase 3 payload builder system
  */
 
 jest.mock("@/lib/db/payload-builds", () => ({
@@ -29,16 +30,20 @@ const mockCount = countPayloadBuilds as jest.Mock
 
 const NOW = Date.now()
 
-function makeBuild(id = "pb1") {
+function makeBuild(id = "pb1", overrides = {}) {
   return {
     id,
     name: "dropper-v1",
-    type: "exe",
+    type: "windows_exe",
+    platform: "windows",
     status: "pending",
     config: {},
+    obfuscationLevel: 0,
+    packingMethod: "none",
     buildLogs: [],
     createdAt: NOW,
     updatedAt: NOW,
+    ...overrides,
   }
 }
 
@@ -85,6 +90,32 @@ describe("GET /api/admin/security/payloads", () => {
     expect(mockList).toHaveBeenCalledWith("alice", expect.any(Number), expect.any(Object))
   })
 
+  it("filters by platform query param", async () => {
+    mockList.mockResolvedValue([makeBuild("pb1", { platform: "windows" })])
+    mockCount.mockResolvedValue(1)
+    mockStats.mockResolvedValue(defaultStats)
+
+    const res = await GET(makeRequest({ url: "http://localhost/api/admin/security/payloads?platform=windows" }))
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.builds).toHaveLength(1)
+    expect(body.builds[0].platform).toBe("windows")
+    expect(body.filters.platform).toBe("windows")
+  })
+
+  it("filters by status query param", async () => {
+    mockList.mockResolvedValue([makeBuild("pb1", { status: "ready" })])
+    mockCount.mockResolvedValue(1)
+    mockStats.mockResolvedValue(defaultStats)
+
+    const res = await GET(makeRequest({ url: "http://localhost/api/admin/security/payloads?status=ready" }))
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.builds).toHaveLength(1)
+    expect(body.builds[0].status).toBe("ready")
+    expect(body.filters.status).toBe("ready")
+  })
+
   it("returns 500 on db error", async () => {
     mockList.mockRejectedValue(new Error("db down"))
     mockCount.mockResolvedValue(0)
@@ -99,7 +130,7 @@ describe("GET /api/admin/security/payloads", () => {
 /*  POST /api/admin/security/payloads                                           */
 /* ------------------------------------------------------------------ */
 describe("POST /api/admin/security/payloads", () => {
-  const validBody = { name: "dropper", type: "exe", config: {} }
+  const validBody = { name: "dropper", type: "windows_exe", config: {} }
 
   it("creates a build and returns 201", async () => {
     mockCreate.mockResolvedValue(makeBuild("pb-new"))
@@ -110,21 +141,102 @@ describe("POST /api/admin/security/payloads", () => {
     expect(body.id).toBe("pb-new")
   })
 
+  it("creates a build with platform field", async () => {
+    const bodyWithPlatform = { ...validBody, platform: "linux" }
+    mockCreate.mockResolvedValue(makeBuild("pb-new", { platform: "linux" }))
+
+    const res = await POST(makeRequest({ body: bodyWithPlatform }))
+    expect(res.status).toBe(201)
+    const body = await res.json()
+    expect(body.id).toBe("pb-new")
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        platform: "linux",
+      })
+    )
+  })
+
+  it("creates a build with obfuscation level", async () => {
+    const bodyWithObf = { ...validBody, obfuscationLevel: 2 }
+    mockCreate.mockResolvedValue(makeBuild("pb-new", { obfuscationLevel: 2 }))
+
+    const res = await POST(makeRequest({ body: bodyWithObf }))
+    expect(res.status).toBe(201)
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        obfuscationLevel: 2,
+      })
+    )
+  })
+
+  it("creates a build with packing method", async () => {
+    const bodyWithPacking = { ...validBody, packingMethod: "upx" }
+    mockCreate.mockResolvedValue(makeBuild("pb-new", { packingMethod: "upx" }))
+
+    const res = await POST(makeRequest({ body: bodyWithPacking }))
+    expect(res.status).toBe(201)
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        packingMethod: "upx",
+      })
+    )
+  })
+
+  it("creates a build with all enhanced fields", async () => {
+    const enhancedBody = {
+      name: "enhanced-dropper",
+      type: "powershell",
+      platform: "windows",
+      config: { hysteriaConfig: { server: "example.com", auth: "secret" } },
+      obfuscationLevel: 3,
+      packingMethod: "upx",
+      description: "Enhanced payload with obfuscation",
+    }
+    mockCreate.mockResolvedValue(makeBuild("pb-new", enhancedBody))
+
+    const res = await POST(makeRequest({ body: enhancedBody }))
+    expect(res.status).toBe(201)
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: "enhanced-dropper",
+        type: "powershell",
+        platform: "windows",
+        obfuscationLevel: 3,
+        packingMethod: "upx",
+        description: "Enhanced payload with obfuscation",
+      })
+    )
+  })
+
   it("returns 400 for missing name", async () => {
-    const res = await POST(makeRequest({ body: { type: "exe", config: {} } }))
+    const res = await POST(makeRequest({ body: { type: "windows_exe", config: {} } }))
     expect(res.status).toBe(400)
     const body = await res.json()
     expect(body.error).toBeDefined()
   })
 
   it("returns 400 for missing config", async () => {
-    const res = await POST(makeRequest({ body: { name: "dropper", type: "exe" } }))
+    const res = await POST(makeRequest({ body: { name: "dropper", type: "windows_exe" } }))
     expect(res.status).toBe(400)
   })
 
   it("returns 400 for description over 500 chars", async () => {
     const res = await POST(
       makeRequest({ body: { ...validBody, description: "x".repeat(501) } }),
+    )
+    expect(res.status).toBe(400)
+  })
+
+  it("returns 400 for invalid obfuscation level", async () => {
+    const res = await POST(
+      makeRequest({ body: { ...validBody, obfuscationLevel: 5 } }),
+    )
+    expect(res.status).toBe(400)
+  })
+
+  it("returns 400 for invalid packing method", async () => {
+    const res = await POST(
+      makeRequest({ body: { ...validBody, packingMethod: "invalid" } }),
     )
     expect(res.status).toBe(400)
   })

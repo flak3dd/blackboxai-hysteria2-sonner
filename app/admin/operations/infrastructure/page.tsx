@@ -1,4 +1,6 @@
 import { InfrastructureOverview } from "@/components/admin/operations/infrastructure/overview"
+import { TrafficStatsDashboard } from "@/components/admin/operations/traffic-stats/traffic-dashboard"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export const dynamic = "force-dynamic"
 
@@ -12,7 +14,20 @@ export default function InfrastructurePage() {
         </p>
       </div>
 
-      <InfrastructureOverview />
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="traffic-stats">Traffic Stats</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview">
+          <InfrastructureOverview />
+        </TabsContent>
+
+        <TabsContent value="traffic-stats">
+          <TrafficStatsDashboard />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

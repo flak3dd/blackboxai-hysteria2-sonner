@@ -14,6 +14,8 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Slider } from "@/components/ui/slider"
 import {
   Dialog,
   DialogContent,
@@ -78,8 +80,18 @@ export function PayloadsView() {
     name: "",
     type: "windows_exe",
     description: "",
+    platform: "windows",
+    packingMethod: "none",
+    compressionLevel: 5,
     obfuscation: true,
     antiAnalysis: true,
+    obfuscationLevel: "medium",
+    obfuscationTechniques: {
+      amsi_bypass: false,
+      etw_bypass: false,
+      string_encode: true,
+      variable_rename: true,
+    },
   })
 
   // Fetch payloads on mount
@@ -111,10 +123,19 @@ export function PayloadsView() {
           server: "auto-detect",
           auth: "auto-generate",
         },
+        platform: form.platform,
+        packing: {
+          method: form.packingMethod,
+          compressionLevel: form.packingMethod !== "none" ? form.compressionLevel : undefined,
+        },
         obfuscation: {
           enabled: form.obfuscation,
-          level: "medium",
-          techniques: form.obfuscation ? ["string_encode", "variable_rename"] : [],
+          level: form.obfuscationLevel,
+          techniques: form.obfuscation
+            ? Object.entries(form.obfuscationTechniques)
+                .filter(([_, enabled]) => enabled)
+                .map(([tech]) => tech)
+            : [],
         },
         signing: {
           enabled: false,
@@ -123,6 +144,7 @@ export function PayloadsView() {
           autoReconnect: true,
           heartbeat: 30,
           fallbackServers: [],
+          antiAnalysis: form.antiAnalysis,
         },
       }
 
@@ -140,7 +162,7 @@ export function PayloadsView() {
       if (!response.ok) throw new Error("Failed to create payload build")
 
       const build = await response.json()
-      
+
       // Start the build process
       const buildResponse = await apiFetch(`/api/admin/security/payloads/${build.id}/build`, {
         method: "POST",
@@ -153,8 +175,24 @@ export function PayloadsView() {
       })
 
       setGenerateOpen(false)
-      setForm({ name: "", type: "windows_exe", description: "", obfuscation: true, antiAnalysis: true })
-      
+      setForm({
+        name: "",
+        type: "windows_exe",
+        description: "",
+        platform: "windows",
+        packingMethod: "none",
+        compressionLevel: 5,
+        obfuscation: true,
+        antiAnalysis: true,
+        obfuscationLevel: "medium",
+        obfuscationTechniques: {
+          amsi_bypass: false,
+          etw_bypass: false,
+          string_encode: true,
+          variable_rename: true,
+        },
+      })
+
       // Refresh the list
       await fetchPayloads()
     } catch (error) {
@@ -297,11 +335,11 @@ export function PayloadsView() {
                 <Plus className="mr-2 h-4 w-4" />
                 Generate New Payload
               </DialogTrigger>
-              <DialogContent className="sm:max-w-lg">
+              <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Generate New Payload</DialogTitle>
                   <DialogDescription>
-                    Configure and compile a new implant payload with stealth features.
+                    Configure and compile a new implant payload with advanced stealth features.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4 py-2">
@@ -315,20 +353,37 @@ export function PayloadsView() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Payload Type</Label>
-                    <Select value={form.type} onValueChange={(v) => setForm((f) => ({ ...f, type: v ?? f.type }))}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="windows_exe">Windows Executable (.exe)</SelectItem>
-                        <SelectItem value="linux_elf">Linux ELF Binary</SelectItem>
-                        <SelectItem value="macos_app">macOS App Bundle (.app)</SelectItem>
-                        <SelectItem value="powershell">PowerShell Script (.ps1)</SelectItem>
-                        <SelectItem value="python">Python Script (.py)</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Payload Type</Label>
+                      <Select value={form.type} onValueChange={(v) => setForm((f) => ({ ...f, type: v ?? f.type }))}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="windows_exe">Windows Executable (.exe)</SelectItem>
+                          <SelectItem value="linux_elf">Linux ELF Binary</SelectItem>
+                          <SelectItem value="macos_app">macOS App Bundle (.app)</SelectItem>
+                          <SelectItem value="powershell">PowerShell Script (.ps1)</SelectItem>
+                          <SelectItem value="python">Python Script (.py)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Platform</Label>
+                      <Select value={form.platform} onValueChange={(v) => setForm((f) => ({ ...f, platform: v ?? f.platform }))}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="windows">Windows</SelectItem>
+                          <SelectItem value="linux">Linux</SelectItem>
+                          <SelectItem value="macos">macOS</SelectItem>
+                          <SelectItem value="cross-platform">Cross-Platform</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
 
                   <div className="space-y-2">
@@ -343,6 +398,49 @@ export function PayloadsView() {
 
                   <Separator />
 
+                  {/* Packing Configuration */}
+                  <div className="space-y-3">
+                    <div>
+                      <Label>Packing Method</Label>
+                      <p className="text-caption text-muted-foreground mt-1">
+                        Compress and pack the payload to reduce size and evade detection
+                      </p>
+                    </div>
+                    <Select value={form.packingMethod} onValueChange={(v) => setForm((f) => ({ ...f, packingMethod: v ?? f.packingMethod }))}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No Packing</SelectItem>
+                        <SelectItem value="upx">UPX (Ultimate Packer for eXecutables)</SelectItem>
+                        <SelectItem value="custom">Custom Packer</SelectItem>
+                      </SelectContent>
+                    </Select>
+
+                    {form.packingMethod !== "none" && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label>Compression Level</Label>
+                          <span className="text-sm text-muted-foreground">{form.compressionLevel}</span>
+                        </div>
+                        <Slider
+                          min={1}
+                          max={9}
+                          step={1}
+                          value={[form.compressionLevel]}
+                          onValueChange={(value) => setForm((f) => ({ ...f, compressionLevel: value[0] }))}
+                        />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Fast</span>
+                          <span>Best</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  {/* Obfuscation Configuration */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
@@ -356,18 +454,129 @@ export function PayloadsView() {
                         onCheckedChange={(v) => setForm((f) => ({ ...f, obfuscation: !!v }))}
                       />
                     </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-body-sm font-medium">Anti-Analysis</p>
-                        <p className="text-caption text-muted-foreground">
-                          VM / debugger / sandbox detection
-                        </p>
-                      </div>
-                      <Switch
-                        checked={form.antiAnalysis}
-                        onCheckedChange={(v) => setForm((f) => ({ ...f, antiAnalysis: !!v }))}
-                      />
+
+                    {form.obfuscation && (
+                      <>
+                        <div className="space-y-2">
+                          <Label>Obfuscation Level</Label>
+                          <Select value={form.obfuscationLevel} onValueChange={(v) => setForm((f) => ({ ...f, obfuscationLevel: v ?? f.obfuscationLevel }))}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="light">Light - Minimal overhead</SelectItem>
+                              <SelectItem value="medium">Medium - Balanced</SelectItem>
+                              <SelectItem value="heavy">Heavy - Maximum stealth</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Obfuscation Techniques</Label>
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="amsi-bypass"
+                                checked={form.obfuscationTechniques.amsi_bypass}
+                                onCheckedChange={(checked) =>
+                                  setForm((f) => ({
+                                    ...f,
+                                    obfuscationTechniques: {
+                                      ...f.obfuscationTechniques,
+                                      amsi_bypass: !!checked,
+                                    },
+                                  }))
+                                }
+                              />
+                              <Label
+                                htmlFor="amsi-bypass"
+                                className="text-sm font-normal cursor-pointer"
+                              >
+                                AMSI Bypass (Anti-Malware Scan Interface)
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="etw-bypass"
+                                checked={form.obfuscationTechniques.etw_bypass}
+                                onCheckedChange={(checked) =>
+                                  setForm((f) => ({
+                                    ...f,
+                                    obfuscationTechniques: {
+                                      ...f.obfuscationTechniques,
+                                      etw_bypass: !!checked,
+                                    },
+                                  }))
+                                }
+                              />
+                              <Label
+                                htmlFor="etw-bypass"
+                                className="text-sm font-normal cursor-pointer"
+                              >
+                                ETW Bypass (Event Tracing for Windows)
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="string-encode"
+                                checked={form.obfuscationTechniques.string_encode}
+                                onCheckedChange={(checked) =>
+                                  setForm((f) => ({
+                                    ...f,
+                                    obfuscationTechniques: {
+                                      ...f.obfuscationTechniques,
+                                      string_encode: !!checked,
+                                    },
+                                  }))
+                                }
+                              />
+                              <Label
+                                htmlFor="string-encode"
+                                className="text-sm font-normal cursor-pointer"
+                              >
+                                String Encoding
+                              </Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="variable-rename"
+                                checked={form.obfuscationTechniques.variable_rename}
+                                onCheckedChange={(checked) =>
+                                  setForm((f) => ({
+                                    ...f,
+                                    obfuscationTechniques: {
+                                      ...f.obfuscationTechniques,
+                                      variable_rename: !!checked,
+                                    },
+                                  }))
+                                }
+                              />
+                              <Label
+                                htmlFor="variable-rename"
+                                className="text-sm font-normal cursor-pointer"
+                              >
+                                Variable Renaming
+                              </Label>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-body-sm font-medium">Anti-Analysis</p>
+                      <p className="text-caption text-muted-foreground">
+                        VM / debugger / sandbox detection
+                      </p>
                     </div>
+                    <Switch
+                      checked={form.antiAnalysis}
+                      onCheckedChange={(v) => setForm((f) => ({ ...f, antiAnalysis: !!v }))}
+                    />
                   </div>
                 </div>
                 <DialogFooter>

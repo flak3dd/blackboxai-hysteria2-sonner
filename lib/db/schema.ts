@@ -218,9 +218,12 @@ export const PayloadBuild = z.object({
   id: z.string().min(1),
   name: z.string().min(1).max(120),
   type: z.string().min(1),
+  platform: z.string().nullable().optional(),
   description: z.string().max(500).nullable().optional(),
   status: PayloadBuildStatus.default("pending"),
   config: z.record(z.string(), z.unknown()),
+  obfuscationLevel: z.number().int().default(1),
+  packingMethod: z.string().nullable().optional(),
   downloadUrl: z.string().nullable().optional(),
   sizeBytes: z.number().int().nullable().optional(),
   buildLogs: z.array(z.string()),
@@ -238,10 +241,13 @@ export type PayloadBuild = z.infer<typeof PayloadBuild>
 export const PayloadBuildCreate = PayloadBuild.pick({
   name: true,
   type: true,
+  platform: true,
   description: true,
   config: true,
+  obfuscationLevel: true,
+  packingMethod: true,
   createdBy: true,
-}).partial({ description: true, createdBy: true })
+}).partial({ description: true, platform: true, obfuscationLevel: true, packingMethod: true, createdBy: true })
 export type PayloadBuildCreate = z.infer<typeof PayloadBuildCreate>
 
 export const PayloadBuildUpdate = PayloadBuildCreate.partial().extend({

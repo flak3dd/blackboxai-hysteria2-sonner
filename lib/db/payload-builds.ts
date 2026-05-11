@@ -7,9 +7,12 @@ function toPayloadBuildZod(row: PayloadBuildModel): PayloadBuildSchema {
     id: row.id,
     name: row.name,
     type: row.type,
+    platform: row.platform ?? undefined,
     description: row.description ?? undefined,
     status: row.status as PayloadBuildSchema["status"],
     config: row.config as Record<string, unknown>,
+    obfuscationLevel: row.obfuscationLevel ?? 1,
+    packingMethod: row.packingMethod ?? undefined,
     downloadUrl: row.downloadUrl ?? undefined,
     sizeBytes: row.sizeBytes ? Number(row.sizeBytes) : null,
     buildLogs: row.buildLogs as string[],
@@ -59,9 +62,12 @@ export async function createPayloadBuild(input: PayloadBuildCreate): Promise<Pay
     data: {
       name: parsed.name,
       type: parsed.type,
+      platform: parsed.platform,
       description: parsed.description,
       status: "pending",
       config: parsed.config as any,
+      obfuscationLevel: parsed.obfuscationLevel ?? 1,
+      packingMethod: parsed.packingMethod,
       buildLogs: [],
       createdBy: parsed.createdBy,
     },
@@ -77,8 +83,12 @@ export async function updatePayloadBuild(id: string, patch: PayloadBuildUpdate):
   const data: Record<string, unknown> = {}
   if (parsed.name !== undefined) data.name = parsed.name
   if (parsed.type !== undefined) data.type = parsed.type
+  if (parsed.platform !== undefined) data.platform = parsed.platform
   if (parsed.description !== undefined) data.description = parsed.description
   if (parsed.status !== undefined) data.status = parsed.status
+  if (parsed.config !== undefined) data.config = parsed.config
+  if (parsed.obfuscationLevel !== undefined) data.obfuscationLevel = parsed.obfuscationLevel
+  if (parsed.packingMethod !== undefined) data.packingMethod = parsed.packingMethod
   if (parsed.downloadUrl !== undefined) data.downloadUrl = parsed.downloadUrl
   if (parsed.sizeBytes !== undefined && parsed.sizeBytes !== null) data.sizeBytes = BigInt(parsed.sizeBytes)
   if (parsed.buildLogs !== undefined) data.buildLogs = parsed.buildLogs

@@ -476,7 +476,7 @@ async def main():
     client = Hysteria2Client(
         server="${server}",
         auth="${auth}",
-        obfs="${obfs or ''}",
+        obfs="${obfs || ''}",
         auto_reconnect=${str(autoReconnect).lower()},
         heartbeat=${heartbeat},
         fallback_servers=${json.dumps(fallbackServers)}
