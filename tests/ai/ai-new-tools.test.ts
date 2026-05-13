@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * Tests for newly added operational AI tools
  *
  * Covers:

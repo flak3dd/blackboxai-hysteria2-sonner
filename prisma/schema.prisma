@@ -439,6 +439,11 @@ model HysteriaNode {
   provider        String?
   profileId       String?
   lastHeartbeatAt DateTime?
+  // SSH connection details for browser-based terminal
+  sshPrivateKey   String?   @db.Text // Encrypted SSH private key
+  sshUsername     String?   // SSH username (root, ubuntu, azureuser, etc.)
+  sshPort         Int       @default(22) // SSH port
+  sshConnectedAt  DateTime? // Last successful SSH connection timestamp
   // Proxy configuration for dynamic proxy management
   socksProxyUrl   String?   // SOCKS5 proxy URL (e.g., socks5://127.0.0.1:1080)
   httpProxyUrl    String?   // HTTP/HTTPS proxy URL (e.g., http://127.0.0.1:8080)

@@ -17,6 +17,7 @@ const RequestBody = z.object({
   email: z.string().email().optional(),
   bandwidthUp: z.string().optional(),
   bandwidthDown: z.string().optional(),
+  cloudflareTunnelUrl: z.string().url().optional(),
 })
 
 export async function POST(req: NextRequest): Promise<NextResponse> {

@@ -44,6 +44,10 @@ export const Node = z.object({
   provider: z.string().max(120).optional(),
   profileId: z.string().nullable().default(null),
   lastHeartbeatAt: z.number().int().nullable().default(null),
+  sshPrivateKey: z.string().nullable().optional(),
+  sshUsername: z.string().nullable().optional(),
+  sshPort: z.number().int().default(22),
+  sshConnectedAt: z.number().int().nullable().optional(),
   createdAt: z.number().int(),
   updatedAt: z.number().int(),
 })
@@ -56,7 +60,10 @@ export const NodeCreate = Node.pick({
   listenAddr: true,
   tags: true,
   provider: true,
-}).partial({ tags: true, provider: true })
+  sshPrivateKey: true,
+  sshUsername: true,
+  sshPort: true,
+}).partial({ tags: true, provider: true, sshPrivateKey: true, sshUsername: true, sshPort: true })
 export type NodeCreate = z.infer<typeof NodeCreate>
 
 export const NodeUpdate = NodeCreate.partial().extend({
@@ -64,6 +71,7 @@ export const NodeUpdate = NodeCreate.partial().extend({
   tags: z.array(z.string().max(40)).optional(),
   profileId: z.string().nullable().optional(),
   lastHeartbeatAt: z.number().int().nullable().optional(),
+  sshConnectedAt: z.number().int().nullable().optional(),
 })
 export type NodeUpdate = z.infer<typeof NodeUpdate>
 

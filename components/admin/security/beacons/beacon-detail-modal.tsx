@@ -432,22 +432,7 @@ export function BeaconDetailModal({ beacon, open, onOpenChange }: BeaconDetailMo
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {[
-                    { id: "task-001", type: "screenshot", status: "completed", time: "5m ago" },
-                    { id: "task-002", type: "keylog", status: "completed", time: "1h ago" },
-                    { id: "task-003", type: "persistence", status: "completed", time: "2h ago" },
-                  ].map((task) => (
-                    <div key={task.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div>
-                        <div className="font-medium">{task.type}</div>
-                        <div className="text-sm text-muted-foreground">{task.time}</div>
-                      </div>
-                      <Badge className="bg-green-500 text-white">
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                        {task.status}
-                      </Badge>
-                    </div>
-                  ))}
+                  <p className="text-sm text-muted-foreground">No task history available</p>
                 </div>
               </CardContent>
             </Card>

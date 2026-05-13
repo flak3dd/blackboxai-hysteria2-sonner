@@ -1,4 +1,4 @@
-import type { VpsProviderClient, VpsCreateResult, ProviderPreset } from "../types"
+import type { VpsProviderClient, VpsCreateResult, ProviderPreset, VpsInstance } from "../types"
 
 const API = "https://api.vultr.com/v2"
 
@@ -38,6 +38,36 @@ export function vultrClient(apiKey: string): VpsProviderClient {
           { id: "vc2-4c-8gb", label: "4 vCPU", cpu: 4, ram: "8 GB", disk: "180 GB", price: "$40/mo" },
         ],
       }
+    },
+
+    async listInstances(): Promise<VpsInstance[]> {
+      const res = await fetch(`${API}/instances`, { headers: headers(apiKey) })
+      if (!res.ok) {
+        const body = await res.text()
+        throw new Error(`Vultr list instances failed (${res.status}): ${body.slice(0, 300)}`)
+      }
+      const data = (await res.json()) as {
+        instances: Array<{
+          id: string
+          label: string
+          status: string
+          main_ip: string
+          v6_main_ip: string | null
+          region: string
+          plan: string
+          date_created: string
+        }>
+      }
+      return data.instances.map((instance) => ({
+        id: instance.id,
+        name: instance.label,
+        status: instance.status,
+        ipv4: instance.main_ip || null,
+        ipv6: instance.v6_main_ip || null,
+        region: instance.region,
+        size: instance.plan,
+        createdAt: instance.date_created,
+      }))
     },
 
     async createServer(opts): Promise<VpsCreateResult> {

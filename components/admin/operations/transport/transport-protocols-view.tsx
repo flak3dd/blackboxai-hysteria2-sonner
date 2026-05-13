@@ -64,91 +64,11 @@ interface ProtocolConfig {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Initial data                                                       */
-/* ------------------------------------------------------------------ */
-
-const INITIAL_PROTOCOLS: ProtocolConfig[] = [
-  {
-    id: "hysteria2",
-    name: "Hysteria2",
-    status: "Active",
-    description: "UDP-based protocol with obfuscation",
-    icon: Zap,
-    settings: {
-      port: "443",
-      encryption: "AES-256-GCM",
-      obfuscation: "Salamander",
-      tls: true,
-      mux: true,
-      udp: true,
-    },
-    encryptionOptions: ["AES-256-GCM", "ChaCha20-Poly1305", "None"],
-    obfuscationOptions: ["Salamander", "None"],
-  },
-  {
-    id: "shadowsocks",
-    name: "Shadowsocks",
-    status: "Active",
-    description: "Lightweight proxy protocol",
-    icon: Shield,
-    settings: {
-      port: "8388",
-      encryption: "AEAD-2022-BLAKE3-AES-256-GCM",
-      obfuscation: "None",
-      tls: false,
-      mux: true,
-      udp: true,
-    },
-    encryptionOptions: [
-      "AEAD-2022-BLAKE3-AES-256-GCM",
-      "AEAD-2022-BLAKE3-CHACHA20-POLY1305",
-      "AES-256-GCM",
-      "ChaCha20-IETF-Poly1305",
-    ],
-    obfuscationOptions: ["None", "Simple-Obfs HTTP", "Simple-Obfs TLS", "V2Ray Plugin"],
-  },
-  {
-    id: "vmess",
-    name: "VMess",
-    status: "Inactive",
-    description: "V2Ray protocol with encryption",
-    icon: Globe,
-    settings: {
-      port: "10086",
-      encryption: "Auto",
-      obfuscation: "None",
-      tls: false,
-      mux: false,
-      udp: true,
-    },
-    encryptionOptions: ["Auto", "AES-128-GCM", "ChaCha20-Poly1305", "None"],
-    obfuscationOptions: ["None", "WebSocket", "HTTP/2", "gRPC", "QUIC"],
-  },
-  {
-    id: "trojan",
-    name: "Trojan",
-    status: "Active",
-    description: "HTTPS camouflaging protocol",
-    icon: Lock,
-    settings: {
-      port: "443",
-      encryption: "TLS 1.3",
-      obfuscation: "None",
-      tls: true,
-      mux: false,
-      udp: true,
-    },
-    encryptionOptions: ["TLS 1.3", "TLS 1.2"],
-    obfuscationOptions: ["None", "WebSocket", "gRPC"],
-  },
-]
-
-/* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
 export function TransportProtocolsView() {
-  const [protocols, setProtocols] = useState<ProtocolConfig[]>(INITIAL_PROTOCOLS)
+  const [protocols, setProtocols] = useState<ProtocolConfig[]>([])
   const [configOpen, setConfigOpen] = useState(false)
   const [selected, setSelected] = useState<ProtocolConfig | null>(null)
 

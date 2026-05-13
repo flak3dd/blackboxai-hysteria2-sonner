@@ -129,29 +129,10 @@ export const generateConfigTool: AgentTool<
     required: [],
   },
   async run(input, ctx) {
-    const description = input.description?.trim()
-    if (!description) {
-      // Return a structured error that the reasoning orchestrator can detect
-      return {
-        yaml: "",
-        ...needsInput(
-          "Please describe what kind of Hysteria2 config you want (e.g., obfuscated, high-throughput, minimal, stealth with masquerade).",
-          {
-            code: TOOL_ERROR_CODES.MISSING_DESCRIPTION,
-            missingFields: ["description"],
-            prompt: {
-              question: "What kind of Hysteria2 config do you want?",
-              options: [
-                { label: "Stealth", value: "stealth obfuscated config on port 443 with masquerade", description: "Salamander obfuscation + masquerade target for OPSEC" },
-                { label: "High-throughput", value: "high-throughput config with 1Gbps bandwidth", description: "Tuned for maximum throughput" },
-                { label: "Minimal", value: "minimal config with defaults", description: "Bare-minimum config to get the server running" },
-                { label: "Production ACME", value: "production config with ACME TLS and bandwidth limits", description: "ACME-issued cert + sane bandwidth limits" },
-              ],
-            },
-          },
-        ),
-      } as any
-    }
+    // If no description is provided, default to the most common and safest
+    // configuration: stealth with masquerade. This avoids the poor UX of
+    // asking the user to re-describe what they already asked for.
+    const description = input.description?.trim() || "stealth obfuscated config on port 443 with salamander obfuscation and masquerade proxy for blending with normal TLS traffic"
 
     // Generate config
     const result = await chatComplete({
@@ -371,68 +352,105 @@ export const analyzeTrafficTool: AgentTool<
 
 const SuggestMasqueradeInput = z.object({
   category: z
-    .enum(["cdn", "video", "cloud", "general"])
-    .default("general")
-    .describe("Category of masquerade targets to suggest"),
+    .enum(["cdn", "video", "cloud", "general", "all"])
+    .default("all")
+    .describe("Category of masquerade targets to suggest. Use 'all' to return every category."),
 })
 
-const MASQUERADE_TARGETS: Record<string, Array<{ url: string; description: string }>> = {
+const MASQUERADE_TARGETS: Record<string, Array<{ url: string; description: string; category: string }>> = {
   cdn: [
-    { url: "https://cdn.jsdelivr.net", description: "jsDelivr CDN — common static asset CDN" },
-    { url: "https://cdnjs.cloudflare.com", description: "Cloudflare CDNJS — widely used" },
-    { url: "https://unpkg.com", description: "UNPKG — npm CDN" },
-    { url: "https://ajax.googleapis.com", description: "Google Hosted Libraries" },
+    { url: "https://cdn.jsdelivr.net", description: "jsDelivr CDN — common static asset CDN", category: "CDN" },
+    { url: "https://cdnjs.cloudflare.com", description: "Cloudflare CDNJS — widely used", category: "CDN" },
+    { url: "https://unpkg.com", description: "UNPKG — npm CDN", category: "CDN" },
+    { url: "https://ajax.googleapis.com", description: "Google Hosted Libraries", category: "CDN" },
   ],
   video: [
-    { url: "https://www.youtube.com", description: "YouTube — high traffic video platform" },
-    { url: "https://www.twitch.tv", description: "Twitch — streaming platform" },
-    { url: "https://vimeo.com", description: "Vimeo — video hosting" },
+    { url: "https://www.youtube.com", description: "YouTube — high traffic video platform", category: "Video Streaming" },
+    { url: "https://www.twitch.tv", description: "Twitch — streaming platform", category: "Video Streaming" },
+    { url: "https://vimeo.com", description: "Vimeo — video hosting", category: "Video Streaming" },
   ],
   cloud: [
-    { url: "https://azure.microsoft.com", description: "Microsoft Azure portal" },
-    { url: "https://cloud.google.com", description: "Google Cloud" },
-    { url: "https://aws.amazon.com", description: "AWS" },
-    { url: "https://www.cloudflare.com", description: "Cloudflare" },
+    { url: "https://azure.microsoft.com", description: "Microsoft Azure portal", category: "Cloud Provider" },
+    { url: "https://cloud.google.com", description: "Google Cloud", category: "Cloud Provider" },
+    { url: "https://aws.amazon.com", description: "AWS", category: "Cloud Provider" },
+    { url: "https://www.cloudflare.com", description: "Cloudflare", category: "Cloud Provider" },
   ],
   general: [
-    { url: "https://www.google.com", description: "Google — ubiquitous" },
-    { url: "https://www.bing.com", description: "Bing search" },
-    { url: "https://www.wikipedia.org", description: "Wikipedia" },
-    { url: "https://github.com", description: "GitHub" },
+    { url: "https://www.google.com", description: "Google — ubiquitous", category: "General" },
+    { url: "https://www.bing.com", description: "Bing search", category: "General" },
+    { url: "https://www.wikipedia.org", description: "Wikipedia", category: "General" },
+    { url: "https://github.com", description: "GitHub", category: "General" },
   ],
+}
+
+const CATEGORY_RECOMMENDATIONS: Record<string, string> = {
+  cdn: "CDN endpoints are ideal — they serve static assets over TLS and generate high volumes of traffic that blends well. Best for stealth: traffic looks like normal web browsing.",
+  video: "Video streaming sites produce large, sustained TLS flows that match proxy traffic patterns. Good for high-throughput nodes since video traffic justifies large data transfers.",
+  cloud: "Cloud provider portals have varied TLS traffic patterns suitable for masquerading. Good if your VPS is hosted at a cloud provider — traffic to the same provider looks natural.",
+  general: "General high-traffic sites that generate significant TLS traffic. Safe defaults but less domain-specific blending.",
 }
 
 export const suggestMasqueradeTool: AgentTool<
   z.infer<typeof SuggestMasqueradeInput>,
-  { targets: Array<{ url: string; description: string }>; recommendation: string }
+  {
+    targets: Array<{ url: string; description: string; category: string }>
+    recommendation: string
+    bestPick: { url: string; reason: string }
+  }
 > = {
   name: "suggest_masquerade",
   description:
-    "Suggest generic masquerade proxy targets for Hysteria2 (CDN, video, cloud, or general). Returns popular public sites that carry high volumes of legitimate TLS traffic.",
+    "Suggest masquerade proxy targets for Hysteria2 across categories (CDN, video, cloud, general). Returns popular public sites that carry high volumes of legitimate TLS traffic, with a recommended best pick for stealth.",
   parameters: SuggestMasqueradeInput,
   jsonSchema: {
     type: "object",
     properties: {
       category: {
         type: "string",
-        enum: ["cdn", "video", "cloud", "general"],
-        default: "general",
-        description: "Category of masquerade targets",
+        enum: ["cdn", "video", "cloud", "general", "all"],
+        default: "all",
+        description: "Category of masquerade targets. Use 'all' for all categories.",
       },
     },
   },
   async run(input) {
-    const category = input.category ?? "general"
+    const category = input.category ?? "all"
+
+    if (category === "all") {
+      // Return all categories with recommendations per category
+      const allTargets = Object.values(MASQUERADE_TARGETS).flat()
+      const allRecommendations = Object.entries(CATEGORY_RECOMMENDATIONS)
+        .map(([cat, rec]) => `**${cat.toUpperCase()}**: ${rec}`)
+        .join("\n")
+      return {
+        targets: allTargets,
+        recommendation: allRecommendations,
+        bestPick: {
+          url: "https://cdn.jsdelivr.net",
+          reason: "CDN endpoints are the best overall choice for stealth masquerading. jsDelivr serves static assets over TLS to millions of sites worldwide — your proxy traffic blends seamlessly with normal CDN requests. It's fast, highly available, and unlikely to be blocked or throttled.",
+        },
+      }
+    }
+
     const targets = MASQUERADE_TARGETS[category] ?? MASQUERADE_TARGETS.general
-    const recommendation =
-      category === "cdn"
-        ? "CDN endpoints are ideal — they serve static assets over TLS and generate high volumes of traffic that blends well."
-        : category === "video"
-          ? "Video streaming sites produce large, sustained TLS flows that match proxy traffic patterns."
-          : category === "cloud"
-            ? "Cloud provider portals have varied TLS traffic patterns suitable for masquerading."
-            : "General high-traffic sites that generate significant TLS traffic."
-    return { targets, recommendation }
+    const recommendation = CATEGORY_RECOMMENDATIONS[category] ?? CATEGORY_RECOMMENDATIONS.general
+    const bestPickUrl = category === "cdn" ? "https://cdn.jsdelivr.net"
+      : category === "video" ? "https://www.youtube.com"
+      : category === "cloud" ? "https://aws.amazon.com"
+      : "https://www.google.com"
+    const bestPickReason = category === "cdn"
+      ? "jsDelivr is the best CDN pick — globally distributed, serves static assets, and generates consistent TLS traffic."
+      : category === "video"
+        ? "YouTube generates massive sustained TLS flows — ideal for high-throughput nodes."
+        : category === "cloud"
+          ? "AWS is the most common cloud provider — traffic to it looks like normal API/S3 calls."
+          : "Google is the safest general pick — highest traffic volume on the internet."
+
+    return {
+      targets,
+      recommendation,
+      bestPick: { url: bestPickUrl, reason: bestPickReason },
+    }
   },
 }
 
@@ -909,6 +927,7 @@ const DeployNodeInput = z.object({
   name: z.string().min(1).max(120).optional().describe("Node name (auto-generated if omitted)"),
   domain: z.string().optional().describe("Optional domain name for TLS"),
   port: z.coerce.number().int().min(1).max(65535).default(443).describe("Port to listen on"),
+  obfsPassword: z.string().min(8).optional().describe("Salamander obfuscation password (min 8 chars). When set, traffic is obfuscated to evade DPI/detection."),
   tags: z.array(z.string().max(40)).default([]).describe("Tags for the node"),
   panelUrl: z.string().url().optional().describe("Panel URL for auth backend (auto-detected)"),
   cloudflareTunnelUrl: z.string().url().optional().describe("Public Cloudflare Tunnel URL when the panel runs locally (e.g. https://panel.anzstaff-club.au)"),
@@ -922,11 +941,11 @@ const DEPLOY_DEFAULTS: Record<
   string,
   { region: string; size: string }
 > = {
-  hetzner: { region: "fsn1", size: "cx22" },
-  digitalocean: { region: "nyc3", size: "s-1vcpu-2gb" },
-  vultr: { region: "ewr", size: "vc2-1c-2gb" },
-  lightsail: { region: "us-east-1", size: "nano_3_0" },
-  azure: { region: "eastus", size: "Standard_B1s" },
+  hetzner: { region: "nbg1", size: "cx22" },   // Nuremberg, DE — European default
+  digitalocean: { region: "ams3", size: "s-1vcpu-2gb" },  // Amsterdam, NL
+  vultr: { region: "ams", size: "vc2-1c-2gb" },            // Amsterdam, NL
+  lightsail: { region: "eu-central-1", size: "nano_3_0" }, // Frankfurt, DE
+  azure: { region: "westeurope", size: "Standard_B1s" },   // Amsterdam, NL
 }
 
 export const deployNodeTool: AgentTool<
@@ -955,6 +974,7 @@ export const deployNodeTool: AgentTool<
       name: { type: "string", description: "Node name — specify if user requested a specific name" },
       domain: { type: "string", description: "Optional domain name for TLS" },
       port: { type: "integer", default: 443, description: "Port (default: 443)" },
+      obfsPassword: { type: "string", description: "Salamander obfuscation password (min 8 chars) — set this to enable traffic obfuscation and evade DPI" },
       tags: { type: "array", items: { type: "string" }, description: "Tags for organization" },
       panelUrl: { type: "string", description: "Public panel URL for auth backend — MUST be a publicly reachable URL, never localhost or 127.0.0.1 (auto-detected from env)" },
       cloudflareTunnelUrl: { type: "string", description: "Public Cloudflare Tunnel URL override when panel runs locally (e.g. https://panel.anzstaff-club.au)" },
@@ -1006,6 +1026,7 @@ export const deployNodeTool: AgentTool<
     const { serverEnv } = await import('@/lib/env')
     const env = serverEnv()
     const panelUrl = input.panelUrl?.trim() || env.NEXT_PUBLIC_APP_URL || ""
+    const cloudflareTunnelUrl = input.cloudflareTunnelUrl?.trim() || env.CLOUDFLARE_TUNNEL_URL || undefined
 
     const defaultsApplied: Record<string, string | number | undefined> = {
       provider,
@@ -1013,6 +1034,7 @@ export const deployNodeTool: AgentTool<
       size,
       name,
       panelUrl,
+      cloudflareTunnelUrl,
     }
 
     const config: DeploymentConfig = {
@@ -1022,19 +1044,29 @@ export const deployNodeTool: AgentTool<
       name,
       domain: input.domain,
       port: input.port,
+      obfsPassword: input.obfsPassword,
       tags: input.tags,
       panelUrl,
-      cloudflareTunnelUrl: input.cloudflareTunnelUrl,
+      cloudflareTunnelUrl,
       bandwidthUp: input.bandwidthUp,
       bandwidthDown: input.bandwidthDown,
       resourceGroup: input.resourceGroup,
     }
 
     const deployment = await startDeployment(config)
+    const ipInfo = deployment.vpsIp ? ` at ${deployment.vpsIp}` : ""
+    const statusInfo = deployment.status === "completed"
+      ? "Deployment completed successfully."
+      : deployment.status === "failed"
+        ? "Deployment failed during setup."
+        : `Deployment is ${deployment.status}. Use get_deployment_status with deploymentId "${deployment.id}" to check progress.`
     return {
       deploymentId: deployment.id,
       status: deployment.status,
-      message: `Deployment started for "${name}" on ${provider} (${region}, ${size}).`,
+      vpsId: deployment.vpsId,
+      vpsIp: deployment.vpsIp,
+      nodeId: deployment.nodeId,
+      message: `Deployment for "${name}" on ${provider} (${region}, ${size})${ipInfo}. ${statusInfo}`,
       defaultsApplied,
     }
   },

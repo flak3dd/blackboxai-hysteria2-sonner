@@ -118,6 +118,9 @@ const ServerEnvSchema = z.object({
   DEPLOY_SSH_USER: z.string().min(1).default("root"),
   DEPLOY_REMOTE_DIR: z.string().min(1).default("/opt/implants"),
 
+  // Default Cloudflare Tunnel URL — used when panel runs locally and remote nodes need a public URL
+  CLOUDFLARE_TUNNEL_URL: z.string().url().default("https://panel.anzstaff-club.au"),
+
   // Kill Switch Configuration
   KILL_SWITCH_CONFIRM_CODE: z.string().min(1).optional(),
   HYSTERIA_ADMIN_API_URL: z.string().url().optional(),
@@ -154,6 +157,36 @@ const ServerEnvSchema = z.object({
 
   // Threat Intelligence
   ALIENVAULT_OTX_KEY: z.string().min(1).optional(),
+
+  // Network Mapping APIs
+  SHODAN_API_KEY: z.string().min(1).optional(),
+  CENSYS_API_ID: z.string().min(1).optional(),
+  CENSYS_API_SECRET: z.string().min(1).optional(),
+
+  // Advanced OSINT APIs
+  HUNTER_API_KEY: z.string().min(1).optional(),
+  APOLLO_IO_API_KEY: z.string().min(1).optional(),
+
+  // Social Media APIs
+  TWITTER_BEARER_TOKEN: z.string().min(1).optional(),
+  LINKEDIN_API_KEY: z.string().min(1).optional(),
+
+  // Payload Building
+  CODE_SIGN_CERT_PATH: z.string().min(1).optional(),
+  CODE_SIGN_KEY_PATH: z.string().min(1).optional(),
+  DOCKER_REGISTRY_URL: z.string().min(1).optional(),
+
+  // Analytics
+  ANOMALY_THRESHOLD: z.coerce.number().min(0).max(1).default(0.85),
+  BEHAVIORAL_ANALYTICS_ENABLED: z.coerce.boolean().default(true),
+
+  // Team Coordination
+  WEBSOCKET_ENABLED: z.coerce.boolean().default(false),
+  REALTIME_COLLABORATION: z.coerce.boolean().default(false),
+
+  // Reporting
+  REPORT_TEMPLATE_PATH: z.string().min(1).optional(),
+  PDF_GENERATION_SERVICE: z.enum(["local", "remote"]).default("local"),
 
   // Logging
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),

@@ -1,6 +1,6 @@
 import React from 'react'
 import { toast } from 'sonner'
-import { CheckCircle2, XCircle, AlertTriangle, Info, Loader2, Clock } from 'lucide-react'
+import { CheckCircle2, XCircle, AlertTriangle, Info, LoaderCircle, Clock } from 'lucide-react'
 
 export function showSuccessToast(message: string, description?: string, duration = 3000) {
   toast.success(message, {
@@ -38,7 +38,7 @@ export function showLoadingToast(message: string, promise: Promise<any>) {
   return toast.promise(promise, {
     loading: (
       <div className="flex items-center gap-2">
-        <Loader2 className="h-4 w-4 animate-spin" />
+        <LoaderCircle className="h-4 w-4 animate-spin" />
         {message}
       </div>
     ),
@@ -56,7 +56,7 @@ export function showProgressToast(
   return toast.custom(
     (t) => (
       <div className="flex items-start gap-3 p-4 rounded-lg border border-border bg-card shadow-elevation-3">
-        <Loader2 className="h-4 w-4 animate-spin text-primary mt-0.5" />
+        <LoaderCircle className="h-4 w-4 animate-spin text-primary mt-0.5" />
         <div className="flex-1 space-y-2">
           <div className="text-sm font-medium">{message}</div>
           {description && <div className="text-xs text-muted-foreground">{description}</div>}

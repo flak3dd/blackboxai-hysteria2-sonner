@@ -7,7 +7,9 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { DeployModal } from "@/components/admin/operations/nodes/deploy-modal"
+import { SimplifiedDeployModal as DeployModal } from "@/components/admin/operations/nodes/simplified-deploy-modal"
+import { ImportNodeModal } from "@/components/admin/operations/nodes/import-node-modal"
+import { SshTerminalModal } from "@/components/admin/operations/nodes/ssh-terminal-modal"
 import {
   type NodeItem,
   type ProfileItem,
@@ -26,7 +28,9 @@ type ModalState =
   | { kind: "rotate"; node: NodeItem }
   | { kind: "delete"; node: NodeItem }
   | { kind: "deploy" }
+  | { kind: "import" }
   | { kind: "apply-profile" }
+  | { kind: "ssh"; node: NodeItem }
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -189,6 +193,9 @@ export function NodesView() {
           <Button size="sm" onClick={() => setModal({ kind: "deploy" })}>
             + Deploy New Node
           </Button>
+          <Button variant="outline" size="sm" onClick={() => setModal({ kind: "import" })}>
+            + Import Existing
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setModal({ kind: "new" })}>
             + Manual Add
           </Button>
@@ -329,6 +336,14 @@ export function NodesView() {
                           <Button
                             variant="ghost"
                             size="xs"
+                            onClick={() => setModal({ kind: "ssh", node: n })}
+                            className="bg-blue-50 dark:bg-blue-950 hover:bg-blue-100 dark:hover:bg-blue-900"
+                          >
+                            SSH
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="xs"
                             onClick={() => setModal({ kind: "edit", node: n })}
                           >
                             Edit
@@ -407,6 +422,24 @@ export function NodesView() {
             setModal({ kind: "closed" })
             load()
           }}
+        />
+      )}
+
+      {modal.kind === "import" && (
+        <ImportNodeModal
+          onClose={() => setModal({ kind: "closed" })}
+          onImported={() => {
+            setModal({ kind: "closed" })
+            load()
+          }}
+        />
+      )}
+
+      {modal.kind === "ssh" && (
+        <SshTerminalModal
+          nodeId={modal.node.id}
+          nodeName={modal.node.name}
+          onClose={() => setModal({ kind: "closed" })}
         />
       )}
 

@@ -43,9 +43,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     await verifyAdmin(req)
     const body = await req.json()
-    const parsed = ImplantCreateSchema.parse(body)
+    const result = ImplantCreateSchema.safeParse(body)
+    if (!result.success) {
+      return NextResponse.json({ error: result.error.message }, { status: 400 })
+    }
 
-    const implant = await createImplant(parsed)
+    const implant = await createImplant(result.data)
 
     return NextResponse.json(implant, { status: 201 })
   } catch (error) {

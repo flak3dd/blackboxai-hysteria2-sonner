@@ -1,5 +1,5 @@
-import type { VpsProviderClient, VpsCreateResult, ProviderPreset } from "../types"
-import { createHmac, createHash } from "node:crypto"
+import type { VpsProviderClient, VpsCreateResult, ProviderPreset, VpsInstance } from "../types"
+import { createHmac, createHash, createPublicKey } from "node:crypto"
 
 /**
  * Minimal AWS Lightsail client using Signature V4 (no SDK dependency).
@@ -65,6 +65,9 @@ async function lightsailRequest(
 export function lightsailClient(accessKey: string, secretKey: string, awsRegion: string): VpsProviderClient {
   return {
     name: "lightsail",
+    // AWS Lightsail's ImportKeyPair has inconsistent ed25519 support —
+    // RSA 4096 is universally accepted across all AWS regions.
+    preferredSshKeyType: "rsa",
 
     presets(): ProviderPreset {
       return {
@@ -90,11 +93,67 @@ export function lightsailClient(accessKey: string, secretKey: string, awsRegion:
       }
     },
 
+    async listInstances(): Promise<VpsInstance[]> {
+      const data = (await lightsailRequest(accessKey, secretKey, awsRegion, "GetInstances", {})) as {
+        instances?: Array<{
+          name: string
+          state: { name: string }
+          publicIpAddress?: string
+          ipv6Addresses?: Array<{ address: string }>
+          location: { regionName: string }
+          bundleId: string
+          createdAt: string
+        }>
+      }
+      return (data.instances || []).map((instance) => ({
+        id: instance.name,
+        name: instance.name,
+        status: instance.state.name,
+        ipv4: instance.publicIpAddress || null,
+        ipv6: instance.ipv6Addresses?.[0]?.address || null,
+        region: instance.location.regionName,
+        size: instance.bundleId,
+        createdAt: instance.createdAt,
+      }))
+    },
+
     async createServer(opts): Promise<VpsCreateResult> {
       const keyName = `hysteria-deploy-${Date.now()}`
-      await lightsailRequest(accessKey, secretKey, awsRegion, "ImportKeyPair", {
+
+      // Lightsail ImportKeyPair expects publicKeyBase64 to be the raw SPKI DER
+      // bytes base64-encoded — NOT the whole "ssh-rsa AAAA... comment" string.
+      // We parse the OpenSSH wire format to extract n and e, reconstruct the key
+      // as a JWK, and export SPKI DER via Node.js crypto.
+      const keyContent = opts.sshKeyContent.trim()
+      let publicKeyBase64: string
+      if (keyContent.startsWith("ssh-rsa ")) {
+        const wireBlob = Buffer.from(keyContent.split(" ")[1], "base64")
+        let off = 0
+        const readField = () => {
+          const len = wireBlob.readUInt32BE(off); off += 4
+          const val = wireBlob.subarray(off, off + len); off += len
+          return val
+        }
+        readField() // skip algo name
+        const eBytes = readField()
+        const nBytes = readField()
+        const toB64url = (b: Buffer) =>
+          b.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "")
+        const strip0 = (b: Buffer) => (b[0] === 0 ? b.subarray(1) : b)
+        const pubKey = createPublicKey({
+          key: { kty: "RSA", n: toB64url(strip0(nBytes)), e: toB64url(strip0(eBytes)) } as JsonWebKey,
+          format: "jwk",
+        })
+        publicKeyBase64 = (pubKey.export({ type: "spki", format: "der" }) as Buffer).toString("base64")
+      } else {
+        publicKeyBase64 = Buffer.from(keyContent, "utf8").toString("base64")
+      }
+
+      // Key pairs in Lightsail are region-scoped — import to the same region as the instance.
+      const deployRegion = opts.region || awsRegion
+      await lightsailRequest(accessKey, secretKey, deployRegion, "ImportKeyPair", {
         keyPairName: keyName,
-        publicKeyBase64: Buffer.from(opts.sshKeyContent).toString("base64"),
+        publicKeyBase64,
       })
 
       const instanceName = opts.name.replace(/[^a-zA-Z0-9-]/g, "-").toLowerCase().slice(0, 63)
@@ -106,17 +165,25 @@ export function lightsailClient(accessKey: string, secretKey: string, awsRegion:
         keyPairName: keyName,
       })) as { operations?: { resourceName?: string }[] }
 
+      // Encode the deploy region into the vpsId so waitForIp can query the right region.
+      const resolvedInstanceName = data.operations?.[0]?.resourceName ?? instanceName
       return {
-        vpsId: data.operations?.[0]?.resourceName ?? instanceName,
+        vpsId: `${deployRegion}:${resolvedInstanceName}`,
         ip: null,
+        sshUsername: "ubuntu", // AWS Lightsail Ubuntu instances use 'ubuntu' user, not root
       }
     },
 
     async waitForIp(vpsId, timeoutMs = 180_000): Promise<string> {
+      // vpsId is "<region>:<instanceName>" — parse both parts.
+      const colonIdx = vpsId.indexOf(":")
+      const region = colonIdx !== -1 ? vpsId.slice(0, colonIdx) : awsRegion
+      const instanceName = colonIdx !== -1 ? vpsId.slice(colonIdx + 1) : vpsId
+
       const deadline = Date.now() + timeoutMs
       while (Date.now() < deadline) {
-        const data = (await lightsailRequest(accessKey, secretKey, awsRegion, "GetInstance", {
-          instanceName: vpsId,
+        const data = (await lightsailRequest(accessKey, secretKey, region, "GetInstance", {
+          instanceName,
         })) as {
           instance?: { state?: { name?: string }; publicIpAddress?: string }
         }
@@ -129,8 +196,11 @@ export function lightsailClient(accessKey: string, secretKey: string, awsRegion:
     },
 
     async destroyServer(vpsId): Promise<void> {
-      await lightsailRequest(accessKey, secretKey, awsRegion, "DeleteInstance", {
-        instanceName: vpsId,
+      const colonIdx = vpsId.indexOf(":")
+      const region = colonIdx !== -1 ? vpsId.slice(0, colonIdx) : awsRegion
+      const instanceName = colonIdx !== -1 ? vpsId.slice(colonIdx + 1) : vpsId
+      await lightsailRequest(accessKey, secretKey, region, "DeleteInstance", {
+        instanceName,
         forceDeleteAddOns: true,
       }).catch((err) => {
         if (!(err instanceof Error && err.message.includes("NotFoundException"))) throw err

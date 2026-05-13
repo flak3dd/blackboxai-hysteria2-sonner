@@ -60,6 +60,27 @@ type CompletionStatus = "COMPLETE" | "PARTIAL" | "BLOCKED" | "FAILED"
 
 const idempotencyCache = new Map<string, { result: RunChatResult; timestamp: number }>()
 const inFlightByKey = new Map<string, Promise<RunChatResult>>()
+const IDEMPOTENCY_MAX_ENTRIES = 200
+
+/** Evict expired and excess entries from the idempotency cache */
+function evictIdempotencyCache(): void {
+  // Remove expired entries
+  const now = Date.now()
+  for (const [key, entry] of idempotencyCache) {
+    if (now - entry.timestamp > IDEMPOTENCY_TTL_MS) {
+      idempotencyCache.delete(key)
+    }
+  }
+  // If still over limit, evict oldest entries
+  if (idempotencyCache.size > IDEMPOTENCY_MAX_ENTRIES) {
+    const entries = [...idempotencyCache.entries()]
+      .sort((a, b) => a[1].timestamp - b[1].timestamp)
+    const toDelete = entries.slice(0, idempotencyCache.size - IDEMPOTENCY_MAX_ENTRIES)
+    for (const [key] of toDelete) {
+      idempotencyCache.delete(key)
+    }
+  }
+}
 
 function isTimeoutError(err: unknown): boolean {
   if (!(err instanceof Error)) return false
@@ -89,6 +110,7 @@ function cacheGet(key: string): RunChatResult | null {
 function cacheSetSuccess(key: string, result: RunChatResult): void {
   if (result.error) return
   idempotencyCache.set(key, { result, timestamp: Date.now() })
+  evictIdempotencyCache()
 }
 
 function toolSignal(base: AbortSignal, timeoutMs: number): AbortSignal {
@@ -108,7 +130,8 @@ function hasOperationalSections(content: string): boolean {
     lower.includes("errors") &&
     lower.includes("requirements") &&
     lower.includes("result") &&
-    lower.includes("next steps")
+    lower.includes("next steps") &&
+    lower.includes("user action required")
   )
 }
 
@@ -184,6 +207,7 @@ function formatOperationalResponse(options: {
   errors?: string[]
   requirements?: string[]
   nextSteps?: string[]
+  userActionRequired?: string[]
   complete?: boolean
 }): string {
   const resultText = options.resultText.trim()
@@ -216,6 +240,20 @@ function formatOperationalResponse(options: {
         ? ["Resolve the errors above or provide corrected inputs before continuing."]
         : ["None."]
 
+  // Build the "User action required" section — always present, explicit about what the user must do
+  const userActionRequired =
+    options.userActionRequired && options.userActionRequired.length > 0
+      ? options.userActionRequired
+      : completionStatus === "COMPLETE"
+        ? ["None — task is complete."]
+        : completionStatus === "BLOCKED"
+          ? ["Your input or approval is needed before I can continue. Please review the Requirements section above and provide the requested information."]
+          : completionStatus === "PARTIAL"
+            ? ["Some steps remain incomplete. Please review the Next steps section and tell me how to proceed."]
+            : completionStatus === "FAILED"
+              ? ["The task could not be completed. Please review the Errors section, fix the issues, and ask me to retry."]
+              : ["None — task is complete."]
+
   const nextSteps =
     options.nextSteps && options.nextSteps.length > 0
       ? options.nextSteps
@@ -242,6 +280,9 @@ function formatOperationalResponse(options: {
     "",
     "Completion status:",
     formatCompletionStatus(completionStatus, toolExecutions),
+    "",
+    "User action required:",
+    formatList(userActionRequired),
     "",
     "Next steps:",
     formatList(nextSteps),
@@ -786,6 +827,7 @@ export async function runChat(
             let toolSuccess = true
             let retried = false
             let retrySuccess = false
+            let needsInputResult: import('@/lib/ai/tool-result').ToolNeedsInputResult | null = null
 
             async function executeTool(args: unknown): Promise<string> {
               const robustResult = await runAiToolRobust(call.function.name, args, {
@@ -796,6 +838,10 @@ export async function runChat(
               })
               if (!robustResult.ok) {
                 throw new Error(robustResult.error || "tool execution failed")
+              }
+              // Detect needsInput — return it separately so the caller can handle it
+              if (robustResult.needsInput && isToolNeedsInput(robustResult.result)) {
+                needsInputResult = robustResult.result as import('@/lib/ai/tool-result').ToolNeedsInputResult
               }
               return JSON.stringify(robustResult.result)
             }
@@ -932,6 +978,7 @@ export async function runChat(
                 retried,
                 retrySuccess,
               } satisfies ToolExecutionSummary,
+              _needsInput: needsInputResult,
             }
           })
 
@@ -939,6 +986,28 @@ export async function runChat(
             newMessages.push(toolMsg)
             llmMessages.push(llmMsg)
             toolExecutions.push(summary)
+          }
+
+          // Handle needsInput: if any tool returned a needs-input result,
+          // surface it to the user and break the loop so they can respond.
+          // This prevents the LLM from silently ignoring the clarification request.
+          const needsInputResults = toolResults.filter(r => r._needsInput)
+          if (needsInputResults.length > 0) {
+            const needsInputMsg = needsInputResults[0]._needsInput!
+            const formattedMsg = formatNeedsInputMessage(needsInputMsg)
+            const clarificationAiMsg: AiMessage = {
+              role: "assistant",
+              content: formatOperationalResponse({
+                resultText: formattedMsg,
+                toolExecutions,
+                userActionRequired: [needsInputMsg.errorMessage],
+                complete: false,
+              }),
+              timestamp: Date.now(),
+            }
+            newMessages.push(clarificationAiMsg)
+            await appendMessages(conversationId, newMessages)
+            return { messages: newMessages }
           }
 
           continue

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { BuildPresetsSelector, type BuildPreset } from "./build-presets-selector"
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -24,16 +25,17 @@ type DeployStep = {
   error: string | null
 }
 
-type DeployPhase = "config" | "deploying" | "done" | "failed"
+type DeployPhase = "presets" | "config" | "deploying" | "done" | "failed"
 
 /* ------------------------------------------------------------------ */
 /*  Deploy Modal                                                       */
 /* ------------------------------------------------------------------ */
 
 export function DeployModal({ onClose, onDeployed }: { onClose: () => void; onDeployed: () => void }) {
-  const [phase, setPhase] = useState<DeployPhase>("config")
+  const [phase, setPhase] = useState<DeployPhase>("presets")
   const [presets, setPresets] = useState<ProviderPreset[]>([])
   const [loadingPresets, setLoadingPresets] = useState(true)
+  const [selectedBuildPreset, setSelectedBuildPreset] = useState<BuildPreset | null>(null)
 
   // form state
   const [provider, setProvider] = useState("hetzner")
@@ -53,6 +55,7 @@ export function DeployModal({ onClose, onDeployed }: { onClose: () => void; onDe
   const [steps, setSteps] = useState<DeployStep[]>([])
   const [deployId, setDeployId] = useState<string | null>(null)
   const [batchDeploying, setBatchDeploying] = useState(false)
+  const [oneClickDeploying, setOneClickDeploying] = useState(false)
   const [batchResults, setBatchResults] = useState<Array<{
     region: string
     size: string
@@ -98,6 +101,64 @@ export function DeployModal({ onClose, onDeployed }: { onClose: () => void; onDe
       if (preset.sizes.length > 0) setSize(preset.sizes[0].id)
     }
   }, [presets])
+
+  // Handle build preset selection
+  const handleBuildPresetSelect = useCallback((preset: BuildPreset) => {
+    setSelectedBuildPreset(preset)
+    // Pre-fill form with preset config
+    setProvider(preset.config.provider)
+    setRegion(preset.config.regions[0] || "")
+    setSize(preset.config.size)
+    setPort(preset.config.port.toString())
+    setTags(preset.config.tags.join(", "))
+    setBandwidthUp(preset.config.bandwidth?.up || "")
+    setBandwidthDown(preset.config.bandwidth?.down || "")
+    setObfsPassword("")
+    setPhase("config")
+  }, [])
+
+  // Handle one-click deployment
+  const handleOneClickDeploy = useCallback(async (preset: BuildPreset) => {
+    setOneClickDeploying(true)
+    toast.info(`Starting one-click deployment of ${preset.name}...`, {
+      description: `Deploying ${preset.config.regions.length} nodes across ${preset.config.regions.join(", ")}`
+    })
+
+    try {
+      const res = await apiFetch("/api/admin/operations/deploy/one-click", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ presetId: preset.id }),
+      })
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: res.statusText }))
+        throw new Error(body.error ?? body.message ?? `${res.status}`)
+      }
+
+      const data = await res.json()
+      setBatchResults(data.results)
+
+      const started = data.results.filter((r: { status: string }) => r.status === "started").length
+      const failed = data.results.filter((r: { status: string }) => r.status === "failed").length
+
+      if (started === data.results.length) {
+        toast.success(`All ${started} nodes deploying!`, { description: `Using "${preset.name}" preset. Check Infrastructure tab for status.` })
+        onClose()
+        onDeployed()
+      } else if (started > 0) {
+        toast.success(`${started} of ${data.results.length} nodes started`, { description: `${failed} failed. Check Infrastructure tab.` })
+        onClose()
+        onDeployed()
+      } else {
+        toast.error("One-click deployment failed", { description: "All deployments failed" })
+      }
+    } catch (err) {
+      toast.error("One-click deploy failed", { description: err instanceof Error ? err.message : "unknown" })
+    } finally {
+      setOneClickDeploying(false)
+    }
+  }, [onClose, onDeployed])
 
   const startBatchDeploy = async () => {
     setBatchDeploying(true)
@@ -223,12 +284,41 @@ export function DeployModal({ onClose, onDeployed }: { onClose: () => void; onDe
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
       <div
-        className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-lg bg-white p-6 shadow-xl dark:bg-zinc-900"
+        className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-lg bg-white p-6 shadow-xl dark:bg-zinc-900"
         onClick={(e) => e.stopPropagation()}
       >
+        {phase === "presets" && (
+          <>
+            <h2 className="text-lg font-semibold mb-4">Quick Deploy - Choose Build Preset</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Select a pre-configured build preset for one-click deployment, or customize your own configuration.
+            </p>
+            <BuildPresetsSelector
+              onPresetSelect={handleBuildPresetSelect}
+              onOneClickDeploy={handleOneClickDeploy}
+              isDeploying={oneClickDeploying}
+            />
+            <div className="mt-4 flex justify-end">
+              <Button variant="outline" onClick={onClose}>Cancel</Button>
+            </div>
+          </>
+        )}
+
         {phase === "config" && (
           <>
-            <h2 className="text-lg font-semibold mb-4">Deploy New Node</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Deploy New Node</h2>
+              {selectedBuildPreset && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setPhase("presets")}
+                  className="text-muted-foreground"
+                >
+                  ← Back to Presets
+                </Button>
+              )}
+            </div>
             {loadingPresets ? (
               <p className="text-sm text-zinc-500">Loading provider presets...</p>
             ) : (
@@ -317,14 +407,14 @@ export function DeployModal({ onClose, onDeployed }: { onClose: () => void; onDe
               <Button
                 variant="secondary"
                 onClick={startBatchDeploy}
-                disabled={loadingPresets || batchDeploying}
+                disabled={loadingPresets || batchDeploying || oneClickDeploying}
                 className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
               >
                 {batchDeploying ? "Deploying 5 Nodes..." : "🚀 Auto Deploy 5 Nodes"}
               </Button>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={onClose}>Cancel</Button>
-                <Button onClick={startDeploy} disabled={loadingPresets || batchDeploying}>Deploy Node</Button>
+                <Button onClick={startDeploy} disabled={loadingPresets || batchDeploying || oneClickDeploying}>Deploy Node</Button>
               </div>
             </div>
           </>

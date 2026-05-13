@@ -10,7 +10,7 @@ import {
   Clock, 
   CheckCircle, 
   XCircle, 
-  Loader2,
+  LoaderCircle,
   AlertCircle,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -73,7 +73,7 @@ export function SessionHistory({ onSelectSession, currentSessionId }: SessionHis
         return <XCircle className="h-4 w-4 text-red-500" />
       case 'processing':
       case 'executing':
-        return <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
+        return <LoaderCircle className="h-4 w-4 text-blue-500 animate-spin" />
       case 'awaiting_input':
         return <AlertCircle className="h-4 w-4 text-yellow-500" />
       default:
@@ -148,7 +148,7 @@ export function SessionHistory({ onSelectSession, currentSessionId }: SessionHis
 
         {isLoading ? (
           <div className="p-8 flex items-center justify-center">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <LoaderCircle className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : sessions.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground">

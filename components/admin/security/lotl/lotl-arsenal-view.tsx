@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback } from "react"
+import { LOTL_COMMANDS } from "@/lib/lotl/lotl-commands"
 import {
   Card,
   CardContent,
@@ -73,73 +74,6 @@ interface LotlTool {
   requiresApproval: boolean
 }
 
-/* ------------------------------------------------------------------ */
-/*  Seed data                                                          */
-/* ------------------------------------------------------------------ */
-
-const INITIAL_TOOLS: LotlTool[] = [
-  {
-    id: "lotl_1",
-    name: "PowerShell",
-    category: "Scripting",
-    status: "Available",
-    risk: "Medium",
-    usage: "High",
-    description: "Windows PowerShell for scripting and automation tasks.",
-    binaryPath: "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
-    args: "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden",
-    requiresApproval: false,
-  },
-  {
-    id: "lotl_2",
-    name: "WMIC",
-    category: "System Info",
-    status: "Available",
-    risk: "Low",
-    usage: "Medium",
-    description: "Windows Management Instrumentation Command-line for system queries.",
-    binaryPath: "C:\\Windows\\System32\\wbem\\WMIC.exe",
-    args: "",
-    requiresApproval: false,
-  },
-  {
-    id: "lotl_3",
-    name: "Certutil",
-    category: "File Operations",
-    status: "Available",
-    risk: "Medium",
-    usage: "High",
-    description: "Certificate utility that can download files and encode/decode data.",
-    binaryPath: "C:\\Windows\\System32\\certutil.exe",
-    args: "-urlcache -split -f",
-    requiresApproval: false,
-  },
-  {
-    id: "lotl_4",
-    name: "Bitsadmin",
-    category: "File Transfer",
-    status: "Available",
-    risk: "High",
-    usage: "Medium",
-    description: "Background Intelligent Transfer Service for stealthy file downloads.",
-    binaryPath: "C:\\Windows\\System32\\bitsadmin.exe",
-    args: "/transfer /priority high",
-    requiresApproval: true,
-  },
-  {
-    id: "lotl_5",
-    name: "Schtasks",
-    category: "Scheduling",
-    status: "Available",
-    risk: "High",
-    usage: "High",
-    description: "Task scheduler for persistence and timed execution.",
-    binaryPath: "C:\\Windows\\System32\\schtasks.exe",
-    args: "/create /sc minute /mo 30",
-    requiresApproval: true,
-  },
-]
-
 const CATEGORY_OPTIONS = [
   "Scripting",
   "System Info",
@@ -150,16 +84,54 @@ const CATEGORY_OPTIONS = [
   "Credential Access",
   "Discovery",
   "Lateral Movement",
+  "Defense Evasion",
+  "Execution",
+  "Persistence",
+  "Exfiltration",
 ]
 
 const RISK_OPTIONS: RiskLevel[] = ["Low", "Medium", "High", "Critical"]
+
+const CATEGORY_DISPLAY: Record<string, string> = {
+  file_operations: "File Operations",
+  system_info: "System Info",
+  network_operations: "Networking",
+  discovery: "Discovery",
+  persistence: "Persistence",
+  lateral_movement: "Lateral Movement",
+  credential_access: "Credential Access",
+  defense_evasion: "Defense Evasion",
+  execution: "Execution",
+  exfiltration: "Exfiltration",
+}
+
+function riskMap(r: "low" | "medium" | "high"): RiskLevel {
+  if (r === "low") return "Low"
+  if (r === "medium") return "Medium"
+  return "High"
+}
+
+const REGISTRY_TOOLS: LotlTool[] = LOTL_COMMANDS.flatMap((cat) =>
+  cat.commands.map((cmd) => ({
+    id: cmd.id,
+    name: cmd.name,
+    category: CATEGORY_DISPLAY[cmd.category] ?? cmd.category,
+    status: "Available" as ToolStatus,
+    risk: riskMap(cmd.riskLevel),
+    usage: "Low",
+    description: cmd.description,
+    binaryPath: cmd.binaryPath,
+    args: cmd.command.replace(/^[^\s]+\s*/, ""),
+    requiresApproval: cmd.riskLevel === "high",
+  }))
+)
 
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
 export function LotlArsenalView() {
-  const [tools, setTools] = useState<LotlTool[]>(INITIAL_TOOLS)
+  const [tools, setTools] = useState<LotlTool[]>(REGISTRY_TOOLS)
   const [addOpen, setAddOpen] = useState(false)
   const [configOpen, setConfigOpen] = useState(false)
   const [selected, setSelected] = useState<LotlTool | null>(null)

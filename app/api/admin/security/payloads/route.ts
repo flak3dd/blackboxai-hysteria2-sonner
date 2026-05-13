@@ -81,11 +81,15 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     await verifyAdmin(req)
     const body = await req.json()
-    const parsed = PayloadBuildCreateSchema.parse(body)
+    const result = PayloadBuildCreateSchema.safeParse(body)
+    if (!result.success) {
+      return NextResponse.json({ error: result.error.message }, { status: 400 })
+    }
+    const parsed = result.data
 
-    log.info({ 
-      name: parsed.name, 
-      type: parsed.type, 
+    log.info({
+      name: parsed.name,
+      type: parsed.type,
       platform: parsed.platform,
       obfuscationLevel: parsed.obfuscationLevel,
       packingMethod: parsed.packingMethod

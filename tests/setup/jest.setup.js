@@ -24,6 +24,9 @@ process.env.NODE_ENV = 'test'
 process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://adminuser@localhost:5432/hysteria2?schema=public'
 process.env.NEXTAUTH_SECRET = 'test-secret-key-for-testing-only'
 process.env.NEXTAUTH_URL = 'http://localhost:3000'
+// Required JWT secrets for server env validation
+process.env.JWT_SECRET = 'dev-jwt-secret-change-me-in-production-1234567890'
+process.env.JWT_REFRESH_SECRET = 'dev-jwt-refresh-secret-change-me-in-production-0987'
 
 // Polyfill setImmediate for Jest
 if (typeof setImmediate === 'undefined') {
@@ -32,6 +35,16 @@ if (typeof setImmediate === 'undefined') {
 if (typeof clearImmediate === 'undefined') {
   global.clearImmediate = (id) => clearTimeout(id)
 }
+
+// Mock ESM-only infrastructure packages that crash the Jest transformer
+jest.mock('socks-proxy-agent', () => ({
+  SocksProxyAgent: jest.fn().mockImplementation(() => ({})),
+}))
+
+jest.mock('@/lib/infrastructure/proxy-agent', () => ({
+  createProxyAgent: jest.fn().mockReturnValue(undefined),
+  configureGlobalProxy: jest.fn(),
+}))
 
 // Mock Next.js router
 jest.mock('next/navigation', () => ({

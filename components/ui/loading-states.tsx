@@ -1,6 +1,6 @@
 'use client'
 
-import { Loader2 } from 'lucide-react'
+import { LoaderCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface LoadingOverlayProps {
@@ -25,7 +25,7 @@ export function LoadingOverlay({
   return (
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
       <div className="flex flex-col items-center gap-3">
-        <Loader2 className={cn('animate-spin text-primary', sizeClasses[size])} />
+        <LoaderCircle className={cn('animate-spin text-primary', sizeClasses[size])} />
         <p className="text-body-sm text-muted-foreground">{message}</p>
       </div>
     </div>
@@ -43,7 +43,7 @@ export function InlineLoading({
   
   return (
     <div className="flex items-center gap-2 text-muted-foreground animate-fade-in">
-      <Loader2 className="h-4 w-4 animate-spin" />
+      <LoaderCircle className="h-4 w-4 animate-spin" />
       {message && <span className="text-sm">{message}</span>}
     </div>
   )
@@ -65,7 +65,7 @@ export function ButtonLoading({
         props.className
       )}
     >
-      {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+      {isLoading && <LoaderCircle className="h-4 w-4 animate-spin" />}
       {children}
     </button>
   )

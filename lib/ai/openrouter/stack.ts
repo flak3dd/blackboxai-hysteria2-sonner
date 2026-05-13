@@ -7,7 +7,7 @@
  */
 
 import { createOpenAI } from '@ai-sdk/openai'
-import type { LanguageModel } from 'ai'
+import { streamText, type LanguageModel } from 'ai'
 import { serverEnv, type ServerEnv } from '@/lib/env'
 
 export type OpenRouterModelKind = 'chat_tooling' | 'reasoning_json' | 'cheap'
@@ -104,6 +104,56 @@ export const PROVIDER_FALLBACK_SEQUENCE = [
 
 export type ProviderName = string
 
+/* ------------------------------------------------------------------ */
+/*  Streaming helpers                                                  */
+/* ------------------------------------------------------------------ */
+
+export interface StreamOptions {
+  messages: { role: 'system' | 'user' | 'assistant'; content: string }[]
+  temperature?: number
+  tools?: Record<string, unknown>
+  signal?: AbortSignal
+  modelKind?: OpenRouterModelKind
+  onFinish?: (result: { text: string; finishReason: string }) => void
+}
+
+/** Stream text from OpenRouter, returning an AsyncIterable of text chunks. */
+export async function streamOpenRouterText(
+  options: StreamOptions,
+  env = serverEnv(),
+) {
+  const model = getOpenRouterChatModel(env)
+  const { fullStream } = streamText({
+    model,
+    messages: options.messages,
+    temperature: options.temperature,
+    abortSignal: options.signal,
+    onFinish: options.onFinish,
+  })
+  return fullStream
+}
+
+/** Stream text with a per-chunk callback instead of an iterable. */
+export async function streamOpenRouterTextWithCallback(
+  options: StreamOptions & { onChunk?: (chunk: string) => void | Promise<void> },
+  env = serverEnv(),
+): Promise<string> {
+  const model = getOpenRouterChatModel(env)
+  const result = streamText({
+    model,
+    messages: options.messages,
+    temperature: options.temperature,
+    abortSignal: options.signal,
+    onFinish: options.onFinish,
+  })
+  let full = ''
+  for await (const chunk of result.textStream) {
+    full += chunk
+    await options.onChunk?.(chunk)
+  }
+  return full
+}
+
 /** Ordered list filtered to configured providers (excluding `preferred` if omitPreferred). */
 export function buildConfiguredProviderOrder(
   env: Pick<
@@ -139,8 +189,7 @@ export function buildConfiguredProviderOrder(
   if (options.useShadowGrok && env.SHADOWGROK_ENABLED && nonempty(env.XAI_API_KEY)) {
     configured.add('xai')
   }
-
-  configured.add('grok')
+  if (nonempty(env.XAI_API_KEY)) configured.add('grok')
 
   const omit = options.omitPreferred ?? ''
   return PROVIDER_FALLBACK_SEQUENCE.filter(

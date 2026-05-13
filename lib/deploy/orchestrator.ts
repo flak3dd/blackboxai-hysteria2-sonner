@@ -1,10 +1,11 @@
 import { randomUUID, randomBytes } from "node:crypto"
 import type { Deployment, DeploymentConfig, DeploymentStatus, DeploymentStep, ValidationResult } from "./types"
 import { resolveProviderAsync } from "./providers"
-import { generateSshKeyPair, waitForSsh, sshExec } from "./ssh"
+import { generateSshKeyPair, generateRsaKeyPair, waitForSsh, sshExec } from "./ssh"
 import { buildProvisionScript } from "./provision-script"
 import { createNode, updateNode } from "@/lib/db/nodes"
 import { getProfileById, resolveProfileConfig } from "@/lib/db/profiles"
+import { encryptSshKey } from "@/lib/crypto/encryption"
 
 type StepListener = (step: DeploymentStep) => void
 
@@ -69,9 +70,35 @@ export async function startDeployment(config: DeploymentConfig): Promise<Deploym
   }
   activeDeployments.set(id, deployment)
 
-  runDeployment(id, config).catch((err) => {
+  // Run deployment in the background — but wait until it either completes,
+  // fails, or at least gets a VPS IP before returning, so the caller
+  // (AI tool) gets meaningful data instead of all-null fields.
+  const deploymentPromise = runDeployment(id, config).catch((err) => {
     emit(id, "failed", `Deployment failed: ${err instanceof Error ? err.message : String(err)}`, String(err))
   })
+
+  // Race: wait up to 120s for the deployment to reach a state where
+  // vpsIp is populated (meaning the VPS was created and got an IP),
+  // or for the deployment to finish/fail, whichever comes first.
+  const waitForVpsIp = new Promise<void>((resolve) => {
+    const interval = setInterval(() => {
+      const d = activeDeployments.get(id)
+      if (!d || d.vpsIp || d.status === "completed" || d.status === "failed" || d.status === "destroyed") {
+        clearInterval(interval)
+        resolve()
+      }
+    }, 1000)
+
+    // Timeout after 120s — return whatever we have
+    setTimeout(() => {
+      clearInterval(interval)
+      resolve()
+    }, 120_000)
+  })
+
+  // Don't await the full deployment (it can take 5-10 min for provisioning),
+  // but do wait until we have at least the VPS IP or a terminal state.
+  await waitForVpsIp
 
   return deployment
 }
@@ -79,11 +106,12 @@ export async function startDeployment(config: DeploymentConfig): Promise<Deploym
 export async function validateDeploymentConfig(config: DeploymentConfig): Promise<ValidationResult> {
   const issues: ValidationResult["issues"] = []
 
-  // 1. Validate panel URL is not localhost
+  // 1. Validate panel URL is not localhost (unless cloudflareTunnelUrl is provided)
   const panelUrl = config.panelUrl
   if (panelUrl) {
     const lowerUrl = panelUrl.toLowerCase()
-    if (lowerUrl.includes("localhost") || lowerUrl.includes("127.0.0.1") || lowerUrl.includes("::1")) {
+    const isLocalhost = lowerUrl.includes("localhost") || lowerUrl.includes("127.0.0.1") || lowerUrl.includes("::1")
+    if (isLocalhost && !config.cloudflareTunnelUrl) {
       issues.push({
         severity: "error",
         code: "panel_url_localhost",
@@ -94,7 +122,14 @@ export async function validateDeploymentConfig(config: DeploymentConfig): Promis
           "  1. Use a tunnel: run 'ngrok http 3000' and use the HTTPS URL it gives you\n" +
           "  2. Use Cloudflare Tunnel: 'cloudflared tunnel --url http://localhost:3000'\n" +
           "  3. Deploy the panel to a cloud server (Hetzner CX22 ~$4/mo) and set NEXT_PUBLIC_APP_URL\n" +
-          "Then pass that public URL as panelUrl, or set NEXT_PUBLIC_APP_URL in your .env file.",
+          "Then pass that public URL as panelUrl, or set NEXT_PUBLIC_APP_URL in your .env file.\n" +
+          "Alternatively, pass cloudflareTunnelUrl to override the auth backend URL for remote nodes.",
+      })
+    } else if (isLocalhost && config.cloudflareTunnelUrl) {
+      issues.push({
+        severity: "warning",
+        code: "panel_url_localhost_tunnel_ok",
+        message: `Panel URL is localhost but cloudflareTunnelUrl is set — remote nodes will use the tunnel URL for auth.`,
       })
     }
   }
@@ -168,9 +203,11 @@ async function runDeployment(id: string, config: DeploymentConfig): Promise<void
     }
   }
 
-  // Generate SSH key pair
-  emit(id, "creating_vps", "Generating SSH key pair...")
-  const keyPair = generateSshKeyPair()
+  // Generate SSH key pair — use provider's preferred key type
+  // (e.g. Lightsail requires RSA because ed25519 ImportKeyPair is unreliable)
+  const keyType = provider.preferredSshKeyType ?? "ed25519"
+  emit(id, "creating_vps", `Generating ${keyType.toUpperCase()} SSH key pair...`)
+  const keyPair = keyType === "rsa" ? generateRsaKeyPair() : generateSshKeyPair()
 
   // Create VPS
   emit(id, "creating_vps", `Creating ${config.provider} server in ${config.region} (${config.size})...`)
@@ -182,6 +219,7 @@ async function runDeployment(id: string, config: DeploymentConfig): Promise<void
       size: config.size,
       sshKeyContent: keyPair.publicKey,
       resourceGroup: config.resourceGroup,
+      port: config.port,
     })
     vpsId = result.vpsId
   } catch (err) {
@@ -262,6 +300,7 @@ async function runDeployment(id: string, config: DeploymentConfig): Promise<void
     email: config.email,
     bandwidthUp: profileBandwidthUp,
     bandwidthDown: profileBandwidthDown,
+    cloudflareTunnelUrl: config.cloudflareTunnelUrl,
   })
 
   emit(id, "installing_hysteria", "Running Hysteria 2 installation script...")
@@ -316,6 +355,7 @@ async function runDeployment(id: string, config: DeploymentConfig): Promise<void
   // Register node in database
   emit(id, "registering_node", "Registering node in database...")
   try {
+    const encryptedKey = encryptSshKey(keyPair.privateKey)
     const node = await createNode({
       name: config.name,
       hostname: config.domain ?? ip,
@@ -323,6 +363,9 @@ async function runDeployment(id: string, config: DeploymentConfig): Promise<void
       listenAddr: `:${config.port}`,
       tags: config.tags,
       provider: config.provider,
+      sshPrivateKey: encryptedKey,
+      sshUsername: sshUsername,
+      sshPort: 22,
     })
     deployment.nodeId = node.id
 

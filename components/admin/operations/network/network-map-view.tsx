@@ -81,87 +81,8 @@ interface Finding {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Initial mock data                                                  */
+/*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
-
-const INITIAL_SCANS: ScanEntry[] = [
-  {
-    id: "scan-1",
-    name: "Internal Network Scan",
-    status: "Completed",
-    type: "Full TCP",
-    target: "10.0.0.0/16",
-    duration: "45 min",
-    hosts: "1,247",
-    ports: "8,934",
-    startedAt: "2026-04-29 14:30 UTC",
-    findings: [
-      { host: "10.0.1.15", port: "22", service: "SSH", version: "OpenSSH 8.9", risk: "low" },
-      { host: "10.0.1.15", port: "80", service: "HTTP", version: "nginx 1.24", risk: "info" },
-      { host: "10.0.2.40", port: "3389", service: "RDP", version: "Microsoft Terminal", risk: "high" },
-      { host: "10.0.3.12", port: "445", service: "SMB", version: "Samba 4.17", risk: "medium" },
-      { host: "10.0.5.100", port: "8443", service: "HTTPS", version: "Apache 2.4", risk: "info" },
-    ],
-  },
-  {
-    id: "scan-2",
-    name: "Subnet Enumeration",
-    status: "Running",
-    type: "SYN Stealth",
-    target: "192.168.1.0/24",
-    duration: "12 min",
-    hosts: "567",
-    ports: "2,145",
-    startedAt: "2026-04-30 06:18 UTC",
-    findings: [
-      { host: "192.168.1.1", port: "53", service: "DNS", version: "dnsmasq 2.89", risk: "low" },
-      { host: "192.168.1.50", port: "443", service: "HTTPS", version: "IIS 10.0", risk: "medium" },
-    ],
-  },
-  {
-    id: "scan-3",
-    name: "Cloud Network Discovery",
-    status: "Scheduled",
-    type: "Cloud API",
-    target: "AWS us-east-1",
-    duration: "—",
-    hosts: "—",
-    ports: "—",
-    startedAt: "Scheduled: 2026-04-30 12:00 UTC",
-    findings: [],
-  },
-  {
-    id: "scan-4",
-    name: "Wireless Network Mapping",
-    status: "Completed",
-    type: "Passive WiFi",
-    target: "802.11 a/b/g/n/ac",
-    duration: "30 min",
-    hosts: "89",
-    ports: "567",
-    startedAt: "2026-04-28 22:15 UTC",
-    findings: [
-      { host: "BSSID:AA:BB:CC:DD:EE:01", port: "—", service: "WPA2-PSK", version: "Channel 6", risk: "info" },
-      { host: "BSSID:AA:BB:CC:DD:EE:02", port: "—", service: "WPA3-SAE", version: "Channel 36", risk: "low" },
-      { host: "BSSID:FF:00:11:22:33:44", port: "—", service: "Open", version: "Channel 1", risk: "high" },
-    ],
-  },
-  {
-    id: "scan-5",
-    name: "VPN Detection",
-    status: "Active",
-    type: "Traffic Analysis",
-    target: "0.0.0.0/0",
-    duration: "Continuous",
-    hosts: "234",
-    ports: "1,024",
-    startedAt: "2026-04-27 00:00 UTC",
-    findings: [
-      { host: "45.33.32.156", port: "1194", service: "OpenVPN", version: "2.5.x", risk: "info" },
-      { host: "104.16.0.0/12", port: "443", service: "Cloudflare WARP", version: "—", risk: "low" },
-    ],
-  },
-]
 
 const SCAN_TYPES = [
   "Full TCP",
@@ -253,7 +174,7 @@ function scanIcon(type: string) {
 /* ------------------------------------------------------------------ */
 
 export function NetworkMapView() {
-  const [scans, setScans] = useState<ScanEntry[]>(INITIAL_SCANS)
+  const [scans, setScans] = useState<ScanEntry[]>([])
   const [selectedScan, setSelectedScan] = useState<ScanEntry | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [newScanOpen, setNewScanOpen] = useState(false)

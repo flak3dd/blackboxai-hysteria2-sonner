@@ -1,4 +1,4 @@
-import type { VpsProviderClient, VpsCreateResult, ProviderPreset } from "../types"
+import type { VpsProviderClient, VpsCreateResult, ProviderPreset, VpsInstance } from "../types"
 
 const API = "https://api.hetzner.cloud/v1"
 
@@ -32,6 +32,38 @@ export function hetznerClient(apiKey: string): VpsProviderClient {
           { id: "cx52", label: "CX52", cpu: 16, ram: "32 GB", disk: "320 GB", price: "~$29/mo" },
         ],
       }
+    },
+
+    async listInstances(): Promise<VpsInstance[]> {
+      const res = await fetch(`${API}/servers`, { headers: headers(apiKey) })
+      if (!res.ok) {
+        const body = await res.text()
+        throw new Error(`Hetzner list instances failed (${res.status}): ${body.slice(0, 300)}`)
+      }
+      const data = (await res.json()) as {
+        servers: Array<{
+          id: number
+          name: string
+          status: string
+          public_net: {
+            ipv4: { ip: string }
+            ipv6?: { ip: string }
+          }
+          datacenter: { location: { name: string } }
+          server_type: { name: string }
+          created: string
+        }>
+      }
+      return data.servers.map((server) => ({
+        id: String(server.id),
+        name: server.name,
+        status: server.status,
+        ipv4: server.public_net.ipv4.ip,
+        ipv6: server.public_net.ipv6?.ip || null,
+        region: server.datacenter.location.name,
+        size: server.server_type.name,
+        createdAt: server.created,
+      }))
     },
 
     async createServer(opts): Promise<VpsCreateResult> {

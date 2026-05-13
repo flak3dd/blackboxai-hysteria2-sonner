@@ -1,11 +1,13 @@
 import { Client as SSHClient } from "ssh2"
-import { generateKeyPairSync, randomBytes } from "node:crypto"
+import { generateKeyPairSync, randomBytes, createPublicKey } from "node:crypto"
 
 export type SshKeyPair = {
-  /** OpenSSH-format public key (`ssh-ed25519 BASE64 comment`) — for authorized_keys / cloud APIs */
+  /** OpenSSH-format public key (`ssh-ed25519 BASE64 comment` or `ssh-rsa BASE64 comment`) — for authorized_keys / cloud APIs */
   publicKey: string
   /** OpenSSH-format private key — required by ssh2 v1.x which cannot parse PKCS8 ed25519 */
   privateKey: string
+  /** Key type for logging/debugging */
+  keyType: "ed25519" | "rsa"
 }
 
 /** Length-prefixed string per RFC 4251 §5 */
@@ -82,7 +84,41 @@ export function generateSshKeyPair(): SshKeyPair {
   const opensshPrivate =
     "-----BEGIN OPENSSH PRIVATE KEY-----\n" + wrapped + "\n-----END OPENSSH PRIVATE KEY-----\n"
 
-  return { publicKey: opensshPub, privateKey: opensshPrivate }
+  return { publicKey: opensshPub, privateKey: opensshPrivate, keyType: "ed25519" }
+}
+
+/**
+ * Generate an RSA 4096-bit keypair in OpenSSH formats.
+ *
+ * Lightsail's ImportKeyPair expects the OpenSSH authorized_keys wire format
+ * (`ssh-rsa BASE64 comment`), not a PEM-wrapped SPKI blob.  We extract the
+ * modulus and exponent via JWK and build the wire format manually.
+ */
+export function generateRsaKeyPair(): SshKeyPair {
+  const { privateKey: privPem } = generateKeyPairSync("rsa", {
+    modulusLength: 4096,
+    privateKeyEncoding: { type: "pkcs1", format: "pem" },
+  })
+
+  // Derive public key and export as JWK to get n/e components
+  const pubKeyObj = createPublicKey(privPem)
+  const jwk = pubKeyObj.export({ format: "jwk" }) as { n: string; e: string }
+
+  const decodeB64url = (s: string) =>
+    Buffer.from(s.replace(/-/g, "+").replace(/_/g, "/"), "base64")
+
+  let nBuf = decodeB64url(jwk.n)
+  let eBuf = decodeB64url(jwk.e)
+
+  // Add leading 0x00 when the high bit is set to keep the MPI positive
+  if (nBuf[0] & 0x80) nBuf = Buffer.concat([Buffer.from([0x00]), nBuf])
+  if (eBuf[0] & 0x80) eBuf = Buffer.concat([Buffer.from([0x00]), eBuf])
+
+  const algoName = Buffer.from("ssh-rsa")
+  const blob = Buffer.concat([lenPrefix(algoName), lenPrefix(eBuf), lenPrefix(nBuf)])
+  const opensshPub = `ssh-rsa ${blob.toString("base64")} hysteria-deploy`
+
+  return { publicKey: opensshPub, privateKey: privPem, keyType: "rsa" }
 }
 
 export type SshExecResult = {

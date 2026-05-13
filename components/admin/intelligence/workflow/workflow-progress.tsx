@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { 
   CheckCircle, 
   Circle, 
-  Loader2, 
+  LoaderCircle,
   XCircle, 
   Clock,
   ChevronRight,
@@ -42,7 +42,7 @@ export function WorkflowProgress({ steps, currentStepOrder, status }: WorkflowPr
       case 'error':
         return <XCircle className="h-4 w-4 text-red-500" />
       case 'processing':
-        return <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
+        return <LoaderCircle className="h-4 w-4 text-blue-500 animate-spin" />
       case 'pending':
         return <Circle className="h-4 w-4 text-muted-foreground" />
       default:

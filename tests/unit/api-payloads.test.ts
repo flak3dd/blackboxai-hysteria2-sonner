@@ -5,6 +5,14 @@
  * Enhanced tests for Phase 3 payload builder system
  */
 
+jest.mock("@/lib/auth/admin", () => ({
+  verifyAdmin: jest.fn().mockResolvedValue({ id: "test-admin", role: "admin" }),
+  toErrorResponse: jest.fn((err: unknown) => {
+    const { NextResponse } = require("next/server")
+    return NextResponse.json({ error: String(err) }, { status: 500 })
+  }),
+}))
+
 jest.mock("@/lib/db/payload-builds", () => ({
   listPayloadBuilds: jest.fn(),
   createPayloadBuild: jest.fn(),

@@ -363,7 +363,7 @@ class ReportGenerator {
       }
     }
 
-    // Return a mock ID if no operation
+    // Return a generated ID if no operation
     return { id: `report_${Date.now()}` }
   }
 

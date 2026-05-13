@@ -23,7 +23,7 @@ import { ProactiveInsights } from './proactive-insights'
 import { cn } from '@/lib/utils'
 import {
   Send,
-  Loader2,
+  LoaderCircle,
   Bot,
   User,
   CheckCircle,
@@ -447,12 +447,12 @@ export function WorkflowChat() {
       },
       processing: {
         color: 'border-info/30 bg-info/10 text-info',
-        icon: <Loader2 className="h-3 w-3 animate-spin" />,
+        icon: <LoaderCircle className="h-3 w-3 animate-spin" />,
         label: 'Processing',
       },
       executing: {
         color: 'border-info/30 bg-info/10 text-info',
-        icon: <Loader2 className="h-3 w-3 animate-spin" />,
+        icon: <LoaderCircle className="h-3 w-3 animate-spin" />,
         label: 'Executing',
       },
       awaiting_input: {
@@ -760,7 +760,7 @@ export function WorkflowChat() {
                   </Avatar>
                   <div className="rounded-2xl rounded-bl-md border border-primary/20 bg-gradient-to-br from-primary/[0.08] to-primary/[0.02] px-4 py-2.5">
                     <div className="flex items-center gap-2 text-body-sm text-primary">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
                       <span>Thinking…</span>
                     </div>
                   </div>
@@ -812,7 +812,7 @@ export function WorkflowChat() {
                 className="h-11 w-11 shrink-0 rounded-xl bg-primary shadow-md shadow-primary/20 hover:bg-primary/90"
               >
                 {isLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
                 ) : (
                   <Send className="h-4 w-4" />
                 )}

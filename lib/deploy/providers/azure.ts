@@ -1,4 +1,4 @@
-import type { VpsProviderClient, VpsCreateResult, ProviderPreset } from "../types"
+import type { VpsProviderClient, VpsCreateResult, ProviderPreset, VpsInstance } from "../types"
 
 /**
  * Azure provider using the Azure Resource Manager REST API.
@@ -357,6 +357,119 @@ export function azureClient(auth: AzureAuth): VpsProviderClient {
       return { valid, issues }
     },
 
+    async listInstances(): Promise<VpsInstance[]> {
+      const token = await getAccessToken(auth)
+      const instances: VpsInstance[] = []
+
+      // List all resource groups first
+      const rgRes = await fetch(
+        `${ARM_API}/subscriptions/${sub}/resourceGroups?api-version=${ARM_API_VERSION_RESOURCES}`,
+        { headers: headers(token) },
+      )
+      if (!rgRes.ok) {
+        throw new Error(`Azure list resource groups failed (${rgRes.status})`)
+      }
+      const rgData = (await rgRes.json()) as { value?: Array<{ name: string; location: string }> }
+      const resourceGroups = rgData.value || []
+
+      // For each resource group, list virtual machines
+      for (const rg of resourceGroups) {
+        try {
+          const vmRes = await fetch(
+            `${ARM_API}/subscriptions/${sub}/resourceGroups/${rg.name}/providers/Microsoft.Compute/virtualMachines?api-version=${ARM_API_VERSION_COMPUTE}`,
+            { headers: headers(token) },
+          )
+          if (!vmRes.ok) continue
+
+          const vmData = (await vmRes.json()) as {
+            value?: Array<{
+              name: string
+              location: string
+              properties?: {
+                provisioningState?: string
+                hardwareProfile?: { vmSize?: string }
+                osProfile?: { computerName?: string }
+                networkProfile?: {
+                  networkInterfaces?: Array<{
+                    id?: string
+                  }>
+                }
+              }
+            }>
+          }
+          const vms = vmData.value || []
+
+          for (const vm of vms) {
+            // Try to get the public IP for this VM
+            let ipv4: string | null = null
+            let ipv6: string | null = null
+
+            try {
+              // Get the network interface
+              const nicId = vm.properties?.networkProfile?.networkInterfaces?.[0]?.id
+              if (nicId) {
+                const nicRes = await fetch(
+                  `${nicId}?api-version=${ARM_API_VERSION_NETWORK}`,
+                  { headers: headers(token) },
+                )
+                if (nicRes.ok) {
+                  const nicData = (await nicRes.json()) as {
+                    properties?: {
+                      ipConfigurations?: Array<{
+                        properties?: {
+                          publicIPAddress?: {
+                            id?: string
+                          }
+                        }
+                      }>
+                    }
+                  }
+                  const pipId = nicData.properties?.ipConfigurations?.[0]?.properties?.publicIPAddress?.id
+                  if (pipId) {
+                    const pipRes = await fetch(
+                      `${pipId}?api-version=${ARM_API_VERSION_NETWORK}`,
+                      { headers: headers(token) },
+                    )
+                    if (pipRes.ok) {
+                      const pipData = (await pipRes.json()) as {
+                        properties?: {
+                          ipAddress?: string
+                          publicIPAddressVersion?: string
+                        }
+                      }
+                      if (pipData.properties?.publicIPAddressVersion === "IPv4") {
+                        ipv4 = pipData.properties.ipAddress || null
+                      } else if (pipData.properties?.publicIPAddressVersion === "IPv6") {
+                        ipv6 = pipData.properties.ipAddress || null
+                      }
+                    }
+                  }
+                }
+              }
+            } catch {
+              // Ignore IP lookup failures
+            }
+
+            instances.push({
+              id: vm.name,
+              name: vm.name,
+              status: vm.properties?.provisioningState || "unknown",
+              ipv4,
+              ipv6,
+              region: vm.location,
+              size: vm.properties?.hardwareProfile?.vmSize || "unknown",
+              createdAt: new Date().toISOString(), // Azure doesn't easily provide creation date in list view
+            })
+          }
+        } catch {
+          // Skip resource groups we can't access
+          continue
+        }
+      }
+
+      return instances
+    },
+
     async createServer(opts): Promise<VpsCreateResult> {
       const token = await getAccessToken(auth)
       const safeName = sanitizeName(opts.name)
@@ -452,7 +565,7 @@ export function azureClient(auth: AzureAuth): VpsProviderClient {
                 properties: {
                   protocol: "*",
                   sourcePortRange: "*",
-                  destinationPortRange: "443",
+                  destinationPortRange: String(opts.port ?? 443),
                   sourceAddressPrefix: "*",
                   destinationAddressPrefix: "*",
                   access: "Allow",
@@ -624,13 +737,18 @@ export function azureClient(auth: AzureAuth): VpsProviderClient {
         },
       )
 
-      // The vpsId is the resource group name — we use it to look up and destroy
-      return { vpsId: rgName, ip: null, sshUsername: "azureuser" }
+      // Encode vpsId as JSON with RG name, VM name, and whether the RG was
+      // user-provided (pre-existing).  If user-provided, destroyServer will
+      // only delete the VM + NIC + PIP + NSG — NOT the resource group itself.
+      const userProvidedRg = !!opts.resourceGroup
+      const vpsId = JSON.stringify({ rg: rgName, vm: vmName, userProvidedRg })
+      return { vpsId, ip: null, sshUsername: "azureuser" }
     },
 
     async waitForIp(vpsId, timeoutMs = 180_000): Promise<string> {
       const token = await getAccessToken(auth)
-      const rgName = vpsId
+      const parsed = JSON.parse(vpsId) as { rg: string; vm: string; userProvidedRg: boolean }
+      const rgName = parsed.rg
       const deadline = Date.now() + timeoutMs
 
       while (Date.now() < deadline) {
@@ -643,24 +761,17 @@ export function azureClient(auth: AzureAuth): VpsProviderClient {
 
           const pip = data.value?.[0]
           if (pip?.properties?.ipAddress && pip.properties.provisioningState === "Succeeded") {
-            // Also verify VM is running
-            const vmData = (await armGet(
+            // Verify VM is running using the known VM name from vpsId
+            const vmName = parsed.vm
+            const instanceView = (await armGet(
               token,
-              `${ARM_API}/subscriptions/${sub}/resourceGroups/${rgName}/providers/Microsoft.Compute/virtualMachines?api-version=${ARM_API_VERSION_COMPUTE}`,
-            )) as { value: Array<{ name: string }> }
+              `${ARM_API}/subscriptions/${sub}/resourceGroups/${rgName}/providers/Microsoft.Compute/virtualMachines/${vmName}/instanceView?api-version=${ARM_API_VERSION_COMPUTE}`,
+            )) as { statuses?: Array<{ code?: string }> }
 
-            if (vmData.value?.length > 0) {
-              const vmName = vmData.value[0].name
-              const instanceView = (await armGet(
-                token,
-                `${ARM_API}/subscriptions/${sub}/resourceGroups/${rgName}/providers/Microsoft.Compute/virtualMachines/${vmName}/instanceView?api-version=${ARM_API_VERSION_COMPUTE}`,
-              )) as { statuses?: Array<{ code?: string }> }
-
-              const running = instanceView.statuses?.some(
-                (s) => s.code === "PowerState/running",
-              )
-              if (running) return pip.properties.ipAddress
-            }
+            const running = instanceView.statuses?.some(
+              (s) => s.code === "PowerState/running",
+            )
+            if (running) return pip.properties.ipAddress
           }
         } catch {
           // retry
@@ -672,15 +783,51 @@ export function azureClient(auth: AzureAuth): VpsProviderClient {
 
     async destroyServer(vpsId): Promise<void> {
       const token = await getAccessToken(auth)
-      const rgName = vpsId
-      // Deleting the entire resource group cleans up all resources
-      const res = await fetch(
-        `${ARM_API}/subscriptions/${sub}/resourceGroups/${rgName}?api-version=${ARM_API_VERSION_RESOURCES}`,
-        { method: "DELETE", headers: headers(token) },
-      )
-      if (!res.ok && res.status !== 202 && res.status !== 204 && res.status !== 404) {
-        const text = await res.text()
-        throw new Error(`Azure destroy failed (${res.status}): ${text.slice(0, 300)}`)
+      const parsed = JSON.parse(vpsId) as { rg: string; vm: string; userProvidedRg: boolean }
+      const rgName = parsed.rg
+      const vmName = parsed.vm
+
+      if (parsed.userProvidedRg) {
+        // RG was pre-existing — only delete the resources we created (VM, NIC, PIP, VNet, NSG)
+        // to avoid destroying other resources the user may have in this RG.
+        const safeName = sanitizeName(vmName)
+
+        // Delete in reverse dependency order: VM → NIC → PIP → VNet → NSG
+        const resources = [
+          // VM
+          `${ARM_API}/subscriptions/${sub}/resourceGroups/${rgName}/providers/Microsoft.Compute/virtualMachines/${vmName}?api-version=${ARM_API_VERSION_COMPUTE}`,
+          // NIC
+          `${ARM_API}/subscriptions/${sub}/resourceGroups/${rgName}/providers/Microsoft.Network/networkInterfaces/${safeName}-nic?api-version=${ARM_API_VERSION_NETWORK}`,
+          // PIP
+          `${ARM_API}/subscriptions/${sub}/resourceGroups/${rgName}/providers/Microsoft.Network/publicIPAddresses/${safeName}-pip?api-version=${ARM_API_VERSION_NETWORK}`,
+          // VNet
+          `${ARM_API}/subscriptions/${sub}/resourceGroups/${rgName}/providers/Microsoft.Network/virtualNetworks/${safeName}-vnet?api-version=${ARM_API_VERSION_NETWORK}`,
+          // NSG
+          `${ARM_API}/subscriptions/${sub}/resourceGroups/${rgName}/providers/Microsoft.Network/networkSecurityGroups/${safeName}-nsg?api-version=${ARM_API_VERSION_NETWORK}`,
+        ]
+        for (const url of resources) {
+          try {
+            const res = await fetch(url, { method: "DELETE", headers: headers(token) })
+            // 202 = accepted (async delete), 204 = already gone, 404 = not found — all ok
+            if (!res.ok && res.status !== 202 && res.status !== 204 && res.status !== 404) {
+              console.warn(`Azure resource delete warning (${res.status}): ${url.split("/").pop()}`)
+            }
+            // Small delay between deletes to avoid rate limiting
+            await new Promise((r) => setTimeout(r, 2000))
+          } catch (err) {
+            console.warn(`Azure resource delete error:`, err)
+          }
+        }
+      } else {
+        // We created the RG — safe to delete the entire thing (cascades to all resources)
+        const res = await fetch(
+          `${ARM_API}/subscriptions/${sub}/resourceGroups/${rgName}?api-version=${ARM_API_VERSION_RESOURCES}`,
+          { method: "DELETE", headers: headers(token) },
+        )
+        if (!res.ok && res.status !== 202 && res.status !== 204 && res.status !== 404) {
+          const text = await res.text()
+          throw new Error(`Azure destroy failed (${res.status}): ${text.slice(0, 300)}`)
+        }
       }
     },
   }

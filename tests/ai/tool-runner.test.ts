@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * Tests for the robust tool runner.
  *
  * Verifies:
@@ -44,18 +46,18 @@ describe("Tool runner robustness", () => {
 
   describe("needs-input detection", () => {
     it("returns ok=true and needsInput=true when a tool returns a needs-input result", async () => {
-      // generate_config returns a needs-input result when description is missing
-      const result = await runAiToolRobust("generate_config", {}, {})
+      // deploy_node with provider=azure and no resourceGroup triggers needsInput
+      const result = await runAiToolRobust("deploy_node", { provider: "azure" }, {})
       expect(result.ok).toBe(true)
       expect(result.needsInput).toBe(true)
       expect(isToolNeedsInput(result.result)).toBe(true)
     })
 
     it("preserves the prompt for the orchestrator to render", async () => {
-      const result = await runAiToolRobust("generate_config", {}, {})
+      const result = await runAiToolRobust("deploy_node", { provider: "azure" }, {})
       expect(result.needsInput).toBe(true)
       if (isToolNeedsInput(result.result)) {
-        expect(result.result.error).toBe(TOOL_ERROR_CODES.MISSING_DESCRIPTION)
+        expect(result.result.error).toBe(TOOL_ERROR_CODES.MISSING_REQUIRED_INPUT)
         expect(result.result.errorMessage.length).toBeGreaterThan(0)
         expect(result.result.prompt?.options?.length ?? 0).toBeGreaterThanOrEqual(2)
       }
@@ -64,20 +66,20 @@ describe("Tool runner robustness", () => {
     it("counts needs-input as a non-failure for the circuit breaker", async () => {
       // 10 needs-input calls should NOT open the circuit
       for (let i = 0; i < 10; i++) {
-        await runAiToolRobust("generate_config", {}, {})
+        await runAiToolRobust("deploy_node", { provider: "azure" }, {})
       }
       const breakers = getToolBreakerStatus()
-      expect(breakers.generate_config?.state ?? "closed").toBe("closed")
+      expect(breakers.deploy_node?.state ?? "closed").toBe("closed")
     })
   })
 
   describe("metrics tracking", () => {
     it("counts needs-input separately from successes and failures", async () => {
-      await runAiToolRobust("generate_config", {}, {})
+      await runAiToolRobust("deploy_node", { provider: "azure" }, {})
       const metrics = getToolMetrics()
-      expect(metrics.generate_config?.calls).toBe(1)
-      expect(metrics.generate_config?.needsInput).toBe(1)
-      expect(metrics.generate_config?.failures).toBe(0)
+      expect(metrics.deploy_node?.calls).toBe(1)
+      expect(metrics.deploy_node?.needsInput).toBe(1)
+      expect(metrics.deploy_node?.failures).toBe(0)
     })
   })
 

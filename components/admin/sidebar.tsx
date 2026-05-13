@@ -31,7 +31,6 @@ import {
   Zap,
   Activity,
   ChevronLeft,
-  ChevronRight as ChevronRightIcon,
 } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -211,7 +210,7 @@ export function AdminSidebar() {
           className="h-7 w-7"
         >
           {isCollapsed ? (
-            <ChevronRightIcon className="h-4 w-4" />
+            <ChevronRight className="h-4 w-4" />
           ) : (
             <ChevronLeft className="h-4 w-4" />
           )}

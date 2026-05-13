@@ -2,7 +2,6 @@ import { NextResponse, type NextRequest } from "next/server"
 import { getPayloadBuildById } from "@/lib/db/payload-builds"
 import { verifyAdmin, toErrorResponse } from "@/lib/auth/admin"
 import { readFile } from "fs/promises"
-import { join } from "path"
 import { existsSync } from "fs"
 import logger from "@/lib/logger"
 
@@ -42,17 +41,17 @@ export async function GET(
     // Generate filename with platform and obfuscation info
     const filename = generateFilename(build)
     
-    // For demo purposes, generate a mock payload if no binary path exists
+    // Check if binary path exists
     if (!build.implantBinaryPath) {
-      log.info({ buildId: id, type: build.type, platform: build.platform }, "Generating mock payload for download")
-      return generateMockPayload(build, filename)
+      log.warn({ buildId: id }, "Payload binary path not available")
+      return NextResponse.json({ error: "Payload binary not available for download" }, { status: 404 })
     }
 
-    // Check if the file exists
-    const filePath = join(process.cwd(), build.implantBinaryPath)
+    // Use absolute path as stored by the builder
+    const filePath = build.implantBinaryPath
     if (!existsSync(filePath)) {
-      log.warn({ buildId: id, expectedPath: filePath }, "Binary file not found on server, generating mock payload")
-      return generateMockPayload(build, filename)
+      log.warn({ buildId: id, expectedPath: filePath }, "Binary file not found on server")
+      return NextResponse.json({ error: "Payload binary file not found on server" }, { status: 404 })
     }
 
     // Read the file and serve it
@@ -94,7 +93,6 @@ function generateFilename(build: any): string {
   const sanitizedName = build.name.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '')
   const ext = getFileExtension(build.type)
   
-  // Add platform and obfuscation info to filename for enhanced payloads
   let filename = `${sanitizedName}`
   
   if (build.platform) {
@@ -113,131 +111,12 @@ function generateFilename(build: any): string {
   return `${filename}.${ext}`
 }
 
-function generateMockPayload(build: any, filename: string): NextResponse {
-  // Generate a mock payload for demo purposes
-  const mockContent = generateMockPayloadContent(build)
-  const buffer = Buffer.from(mockContent, 'utf-8')
-  
-  const contentType = getContentType(build.type)
-  
-  log.info({ 
-    buildId: build.id, 
-    filename, 
-    size: buffer.length,
-    type: build.type,
-    platform: build.platform
-  }, "Serving mock payload")
-
-  return new NextResponse(buffer, {
-    headers: {
-      "Content-Type": contentType,
-      "Content-Disposition": `attachment; filename="${filename}"`,
-      "Content-Length": buffer.length.toString(),
-      "X-Payload-Type": build.type,
-      "X-Payload-Platform": build.platform || "unknown",
-      "X-Obfuscation-Level": build.obfuscationLevel?.toString() || "0",
-      "X-Packing-Method": build.packingMethod || "none",
-      "X-Mock-Payload": "true",
-      "X-Warning": "This is a mock payload for demo purposes",
-    },
-  })
-}
-
-function generateMockPayloadContent(build: any): string {
-  const { type, platform, config, obfuscationLevel, packingMethod } = build
-  
-  const baseContent = `# Hysteria2 Payload - ${build.name}
-# Type: ${type}
-# Platform: ${platform || 'unknown'}
-# Generated: ${new Date().toISOString()}
-# Obfuscation Level: ${obfuscationLevel || 0}
-# Packing Method: ${packingMethod || 'none'}
-
-`
-  
-  switch (type) {
-    case "powershell":
-      return baseContent + generateMockPowerShell(config)
-    case "python":
-      return baseContent + generateMockPython(config)
-    case "windows_exe":
-    case "linux_elf":
-    case "macos_app":
-      return baseContent + `# Binary payload placeholder
-# In production, this would be a compiled ${type} binary
-# Configuration embedded: ${JSON.stringify(config, null, 2)}
-`
-    default:
-      return baseContent + `# Unknown payload type: ${type}`
-  }
-}
-
-function generateMockPowerShell(config: any): string {
-  const hysteriaConfig = config?.hysteriaConfig || { server: "example.com:443", auth: "secret" }
-  return `
-# PowerShell Hysteria2 Client Loader
-param(
-    [string]$Server = "${hysteriaConfig.server}",
-    [string]$Auth = "${hysteriaConfig.auth}"
-)
-
-Write-Host "Hysteria2 PowerShell Client"
-Write-Host "Server: $Server"
-Write-Host "Auth: $Auth"
-
-# AMSI Bypass (if enabled)
-# $Ref = ([Ref].Assembly.GetType('System.Management.Automation.AmsiUtils'))
-# $Ref.GetField('amsiInitFailed','NonPublic,Static').SetValue($null,$true)
-
-# ETW Bypass (if enabled)
-# $Ref = ([Ref].Assembly.GetType('System.Management.Automation.Tracing.PSEtwLogProvider'))
-# $Ref.GetField('etwProvider','NonPublic,Static').SetValue($null,$null)
-
-# Main client logic would go here
-Write-Host "Client initialized successfully"
-`
-}
-
-function generateMockPython(config: any): string {
-  const hysteriaConfig = config?.hysteriaConfig || { server: "example.com:443", auth: "secret" }
-  return `
-#!/usr/bin/env python3
-"""
-Hysteria2 Python Client
-Server: ${hysteriaConfig.server}
-Auth: ${hysteriaConfig.auth}
-"""
-
-import asyncio
-import socket
-
-class Hysteria2Client:
-    def __init__(self, server: str, auth: str):
-        self.server = server
-        self.auth = auth
-    
-    async def connect(self):
-        print(f"Connecting to {self.server}...")
-        # Implementation would go here
-        print("Connected successfully")
-
-async def main():
-    client = Hysteria2Client("${hysteriaConfig.server}", "${hysteriaConfig.auth}")
-    await client.connect()
-
-if __name__ == "__main__":
-    asyncio.run(main())
-`
-}
-
 function getContentType(payloadType: string): string {
   switch (payloadType) {
     case "windows_exe":
-      return "application/vnd.microsoft.portable-executable"
     case "linux_elf":
-      return "application/x-executable"
     case "macos_app":
-      return "application/octet-stream"
+      return "text/plain"
     case "powershell":
       return "text/plain"
     case "python":
@@ -250,16 +129,14 @@ function getContentType(payloadType: string): string {
 function getFileExtension(payloadType: string): string {
   switch (payloadType) {
     case "windows_exe":
-      return "exe"
     case "linux_elf":
-      return "elf"
     case "macos_app":
-      return "app"
+      return "go"
     case "powershell":
       return "ps1"
     case "python":
       return "py"
     default:
-      return "bin"
+      return "go"
   }
 }

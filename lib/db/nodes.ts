@@ -14,6 +14,10 @@ function toNodeZod(row: HysteriaNode): Node {
     provider: row.provider ?? undefined,
     profileId: row.profileId ?? null,
     lastHeartbeatAt: row.lastHeartbeatAt ? row.lastHeartbeatAt.getTime() : null,
+    sshPrivateKey: row.sshPrivateKey ?? undefined,
+    sshUsername: row.sshUsername ?? undefined,
+    sshPort: row.sshPort,
+    sshConnectedAt: row.sshConnectedAt ? row.sshConnectedAt.getTime() : null,
     createdAt: row.createdAt.getTime(),
     updatedAt: row.updatedAt.getTime(),
   }
@@ -48,6 +52,9 @@ export async function createNode(input: NodeCreate): Promise<Node> {
       status: "stopped",
       tags: JSON.stringify(parsed.tags ?? []),
       provider: parsed.provider,
+      sshPrivateKey: parsed.sshPrivateKey,
+      sshUsername: parsed.sshUsername,
+      sshPort: parsed.sshPort ?? 22,
     },
   })
   return toNodeZod(row)
@@ -69,6 +76,12 @@ export async function updateNode(id: string, patch: NodeUpdate): Promise<Node | 
   if (parsed.profileId !== undefined) data.profileId = parsed.profileId
   if (parsed.lastHeartbeatAt !== undefined) {
     data.lastHeartbeatAt = parsed.lastHeartbeatAt ? new Date(parsed.lastHeartbeatAt) : null
+  }
+  if (parsed.sshPrivateKey !== undefined) data.sshPrivateKey = parsed.sshPrivateKey
+  if (parsed.sshUsername !== undefined) data.sshUsername = parsed.sshUsername
+  if (parsed.sshPort !== undefined) data.sshPort = parsed.sshPort
+  if (parsed.sshConnectedAt !== undefined) {
+    data.sshConnectedAt = parsed.sshConnectedAt ? new Date(parsed.sshConnectedAt) : null
   }
 
   const row = await prisma.hysteriaNode.update({ where: { id }, data })

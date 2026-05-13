@@ -45,5 +45,14 @@ const customJestConfig = {
   modulePathIgnorePatterns: ['<rootDir>/.next/'],
 }
 
-// createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async
-module.exports = createJestConfig(customJestConfig)
+// next/jest sets its own transformIgnorePatterns; we wrap it to also
+// allow `jose` (ESM-only) and other ESM packages to be transformed.
+const baseConfig = createJestConfig(customJestConfig)
+
+module.exports = async () => {
+  const config = await baseConfig()
+  config.transformIgnorePatterns = [
+    '/node_modules/(?!(jose|@panva|oidc-token-hash|socks-proxy-agent)/)',
+  ]
+  return config
+}

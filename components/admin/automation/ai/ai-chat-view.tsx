@@ -37,7 +37,7 @@ import {
   Zap,
   AlertTriangle,
   CheckCircle2,
-  Loader2,
+  LoaderCircle,
   Terminal,
   Info,
   MessageSquare,
@@ -1202,7 +1202,7 @@ export function AiChatView({ hideHeader = false }: { hideHeader?: boolean } = {}
               )}
               {messagesLoading ? (
                 <div className="flex items-center justify-center gap-2 py-12 text-body-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
                   Loading conversation…
                 </div>
               ) : !activeId ? (
@@ -2342,7 +2342,7 @@ function ProgressBubble({
         {events.length > 0 ? (
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-body-sm text-primary">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
               <span>Working on your request…</span>
             </div>
             <div className="mt-3 space-y-1.5">
@@ -2381,7 +2381,7 @@ function ProgressBubble({
           </div>
         ) : (
           <div className="flex items-center gap-2 text-body-sm text-primary">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
             <span>Processing…</span>
           </div>
         )}
@@ -2438,7 +2438,7 @@ function MessageBubble({
             </p>
             {msg.pending && (
               <span className="inline-flex items-center gap-1">
-                <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                <LoaderCircle className="h-2.5 w-2.5 animate-spin" />
                 sending
               </span>
             )}
@@ -2475,6 +2475,17 @@ function AssistantMessage({
   onCopy: (text: string) => void
   timestamp: number
 }) {
+  // Detect if the message contains a "User action required" section that is NOT "None"
+  const userActionMatch = content.match(/User action required:\s*\n([\s\S]*?)(?=\n\n|\nNext steps:|$)/i)
+  const hasUserAction = userActionMatch
+    ? !userActionMatch[1].toLowerCase().includes("none")
+    : false
+
+  // Extract the "User action required" items for the banner
+  const userActionItems = hasUserAction && userActionMatch
+    ? userActionMatch[1].split("\n").map(l => l.replace(/^-\s*/, "").trim()).filter(Boolean)
+    : []
+
   return (
     <div className="flex items-start gap-3">
       <Avatar className="h-7 w-7 shrink-0 ring-1 ring-primary/20">
@@ -2482,24 +2493,44 @@ function AssistantMessage({
           <Bot className="h-3.5 w-3.5" />
         </AvatarFallback>
       </Avatar>
-      <div className="group max-w-[80%] rounded-2xl rounded-bl-md border border-border/40 bg-muted/40 px-4 py-2.5">
-        <div className="whitespace-pre-wrap font-mono text-body-sm leading-relaxed text-foreground/90">
-          {content}
-        </div>
-        <div className="mt-1.5 flex items-center justify-between gap-2">
-          <span className="text-[10px] text-muted-foreground/60">
-            {new Date(timestamp).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </span>
-          <button
-            onClick={() => onCopy(content)}
-            className="rounded p-0.5 text-muted-foreground/60 opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
-            title="Copy"
-          >
-            <Copy className="h-3 w-3" />
-          </button>
+      <div className="group max-w-[80%] space-y-2">
+        {hasUserAction && (
+          <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
+            <div className="min-w-0">
+              <p className="text-micro font-semibold text-amber-600">Your input is needed</p>
+              <ul className="mt-0.5 space-y-0.5">
+                {userActionItems.slice(0, 3).map((item, i) => (
+                  <li key={i} className="text-micro text-amber-600/80">{item}</li>
+                ))}
+                {userActionItems.length > 3 && (
+                  <li className="text-micro text-amber-600/60">
+                    +{userActionItems.length - 3} more — see details below
+                  </li>
+                )}
+              </ul>
+            </div>
+          </div>
+        )}
+        <div className="rounded-2xl rounded-bl-md border border-border/40 bg-muted/40 px-4 py-2.5">
+          <div className="whitespace-pre-wrap font-mono text-body-sm leading-relaxed text-foreground/90">
+            {content}
+          </div>
+          <div className="mt-1.5 flex items-center justify-between gap-2">
+            <span className="text-[10px] text-muted-foreground/60">
+              {new Date(timestamp).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+            <button
+              onClick={() => onCopy(content)}
+              className="rounded p-0.5 text-muted-foreground/60 opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+              title="Copy"
+            >
+              <Copy className="h-3 w-3" />
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -2532,7 +2563,7 @@ function ToolCallBubble({ call }: { call: ToolCall }) {
   const isCompleted = status === "completed"
 
   const tone = isExecuting
-    ? { ring: "border-info/30 bg-info/5", text: "text-info", Icon: Loader2 }
+    ? { ring: "border-info/30 bg-info/5", text: "text-info", Icon: LoaderCircle }
     : isCompleted
       ? { ring: "border-success/30 bg-success/5", text: "text-success", Icon: CheckCircle2 }
       : { ring: "border-destructive/30 bg-destructive/5", text: "text-destructive", Icon: XCircle }

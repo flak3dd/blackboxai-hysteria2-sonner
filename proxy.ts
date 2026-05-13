@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 /**
- * Global Middleware for Security and Authentication
+ * Global Proxy for Security and Authentication
  * 
  * Features:
  * - Consistent security headers
@@ -31,7 +31,7 @@ const PUBLIC_PATHS = [
 // CSRF-sensitive methods
 const CSRF_SENSITIVE_METHODS = ['POST', 'PUT', 'DELETE', 'PATCH']
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
   const method = request.method
 

@@ -25,7 +25,7 @@ import {
   Crosshair,
   Eye,
   History,
-  Loader2,
+  LoaderCircle,
   Lock,
   Play,
   Send,
@@ -420,7 +420,7 @@ export function ShadowGrokView() {
               {/* Status */}
               {streaming ? (
                 <Badge variant="outline" className="gap-1.5 text-micro border-info/30 bg-info/10 text-info animate-pulse">
-                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <LoaderCircle className="h-3 w-3 animate-spin" />
                   Executing
                 </Badge>
               ) : activeExecution ? (
@@ -580,7 +580,7 @@ export function ShadowGrokView() {
                       </Avatar>
                       <div className="rounded-xl rounded-bl-sm bg-muted/60 border border-border/50 px-4 py-3">
                         <div className="flex items-center gap-2 text-body-sm text-muted-foreground">
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
                           <span>{streamStatus}</span>
                         </div>
                       </div>
@@ -728,7 +728,7 @@ export function ShadowGrokView() {
                 className="h-10 w-10 shrink-0 rounded-xl"
               >
                 {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
                 ) : (
                   <Play className="h-4 w-4" />
                 )}
@@ -754,7 +754,7 @@ export function ShadowGrokView() {
                   History
                 </CardTitle>
                 <Button variant="ghost" size="icon-xs" onClick={loadHistory} disabled={historyLoading}>
-                  {historyLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Activity className="h-3 w-3" />}
+                  {historyLoading ? <LoaderCircle className="h-3 w-3 animate-spin" /> : <Activity className="h-3 w-3" />}
                 </Button>
               </div>
             </CardHeader>
@@ -1011,7 +1011,7 @@ function ApprovalCard({
 
 function ExecutionStatusBadge({ status, small }: { status: string; small?: boolean }) {
   const config: Record<string, { className: string; icon: React.ReactNode }> = {
-    running: { className: "border-info/30 bg-info/10 text-info", icon: <Loader2 className={cn("animate-spin", small ? "h-2.5 w-2.5" : "h-3 w-3")} /> },
+    running: { className: "border-info/30 bg-info/10 text-info", icon: <LoaderCircle className={cn("animate-spin", small ? "h-2.5 w-2.5" : "h-3 w-3")} /> },
     completed: { className: "border-success/30 bg-success/10 text-success", icon: <CheckCircle2 className={small ? "h-2.5 w-2.5" : "h-3 w-3"} /> },
     failed: { className: "border-destructive/30 bg-destructive/10 text-destructive", icon: <XCircle className={small ? "h-2.5 w-2.5" : "h-3 w-3"} /> },
     pending_approval: { className: "border-warning/30 bg-warning/10 text-warning", icon: <Lock className={small ? "h-2.5 w-2.5" : "h-3 w-3"} /> },

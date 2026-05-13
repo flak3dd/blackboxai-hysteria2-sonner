@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
-import { FileText, Download, Loader2, Clock, CheckCircle, AlertCircle, Calendar } from "lucide-react"
+import { FileText, Download, LoaderCircle, Clock, CheckCircle, AlertCircle, Calendar } from "lucide-react"
 
 interface Operation {
   id: string
@@ -363,7 +363,7 @@ No lateral movement recorded.
                 <Button onClick={handleGenerate} disabled={isGenerating || !selectedOperation}>
                   {isGenerating ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
                       Generating...
                     </>
                   ) : (

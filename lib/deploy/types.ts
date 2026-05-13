@@ -45,6 +45,7 @@ export const DeploymentConfig = z.object({
   bandwidthDown: z.string().optional(),
   profileId: z.string().optional(),
   resourceGroup: z.string().optional(), // For Azure: existing resource group name
+  cloudflareTunnelUrl: z.string().url().optional(), // Public tunnel URL when panel runs locally
 })
 export type DeploymentConfig = z.infer<typeof DeploymentConfig>
 
@@ -61,6 +62,17 @@ export const Deployment = z.object({
   updatedAt: z.number().int(),
 })
 export type Deployment = z.infer<typeof Deployment>
+
+export type VpsInstance = {
+  id: string
+  name: string
+  status: string
+  ipv4: string | null
+  ipv6: string | null
+  region: string
+  size: string
+  createdAt: string
+}
 
 export type VpsCreateResult = {
   vpsId: string
@@ -93,6 +105,8 @@ export type ValidationResult = {
 
 export interface VpsProviderClient {
   readonly name: VpsProvider
+  /** Preferred SSH key type — providers that don't support ed25519 should return "rsa" */
+  readonly preferredSshKeyType?: "ed25519" | "rsa"
   presets(): ProviderPreset
   validate?(opts: {
     name: string
@@ -100,12 +114,14 @@ export interface VpsProviderClient {
     size: string
     resourceGroup?: string
   }): Promise<ValidationResult>
+  listInstances?(): Promise<VpsInstance[]>
   createServer(opts: {
     name: string
     region: string
     size: string
     sshKeyContent: string
     resourceGroup?: string // Azure-specific: existing resource group
+    port?: number // Hysteria listen port (for firewall rules, default 443)
   }): Promise<VpsCreateResult>
   waitForIp(vpsId: string, timeoutMs?: number): Promise<string>
   destroyServer(vpsId: string): Promise<void>

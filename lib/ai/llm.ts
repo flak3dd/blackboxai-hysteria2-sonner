@@ -29,13 +29,12 @@ import {
   validateProviderName,
 } from './robustness'
 
-  // Default Claude client — Anthropic is the primary provider
-function createClaudeClient(apiKey?: string) {
-  const env = serverEnv()
-  return anthropic(apiKey || env.ANTHROPIC_API_KEY)
+// OpenRouter client — primary provider for all AI calls
+function createOpenRouterClient(env = serverEnv()) {
+  return createOpenRouterOpenAICompat(env)
 }
 
-// Default Grok client — fallback provider
+// Grok client — kept as last-resort fallback when OpenRouter key is absent
 function createGrokClient(apiKey?: string) {
   const env = serverEnv()
   return createOpenAI({
@@ -621,7 +620,7 @@ async function executeSingleProvider(
   const startTime = Date.now()
 
   let selectedModel: any
-  let selectedModelName: string = model || env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001'
+  let selectedModelName: string = model || getOpenRouterModelId(env, 'chat_tooling')
   let providerUsed = provider
 
   // Build provider client - ANTHROPIC is PRIMARY
@@ -694,19 +693,33 @@ async function executeSingleProvider(
       break
     case 'grok':
     default:
+      if (env.XAI_API_KEY) {
+        const grokClient = createGrokClient()
+        selectedModel = grokClient(model || env.XAI_MODEL)
+        selectedModelName = model || env.XAI_MODEL
+        providerUsed = 'grok'
+      }
+      break
+  }
+
+  // Fallback: prefer OpenRouter, then Grok if nothing else is available
+  if (!selectedModel) {
+    if (env.OPENROUTER_API_KEY) {
+      aiWarn(`Provider ${provider} not available, falling back to OpenRouter`)
+      const orClient = createOpenRouterClient(env)
+      const orModel = model ?? getOpenRouterModelId(env, 'chat_tooling')
+      selectedModel = orClient(orModel)
+      selectedModelName = orModel
+      providerUsed = 'openrouter'
+    } else if (env.XAI_API_KEY) {
+      aiWarn(`Provider ${provider} not available, falling back to Grok`)
       const grokClient = createGrokClient()
       selectedModel = grokClient(model || env.XAI_MODEL)
       selectedModelName = model || env.XAI_MODEL
       providerUsed = 'grok'
-  }
-
-  // Fallback if selected provider not available
-  if (!selectedModel) {
-    aiWarn(`Provider ${provider} not available, falling back to Grok`)
-    const grokClient = createGrokClient()
-    selectedModel = grokClient(model || env.XAI_MODEL)
-    selectedModelName = model || env.XAI_MODEL
-    providerUsed = 'grok'
+    } else {
+      throw new Error(`Provider ${provider} not available and no fallback configured (set OPENROUTER_API_KEY)`)
+    }
   }
 
   aiLog('Using provider:', providerUsed)
