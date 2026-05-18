@@ -299,7 +299,13 @@ export function SmtpConfigManager() {
               <Label className="text-xs">Port</Label>
               <Input
                 value={formPort}
-                onChange={(e) => setFormPort(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setFormPort(val)
+                  const n = parseInt(val)
+                  if (n === 465) setFormSecure(true)
+                  else if (n === 587 || n === 25 || n === 2525) setFormSecure(false)
+                }}
                 placeholder="587"
                 className="h-8 text-sm"
               />
@@ -351,7 +357,15 @@ export function SmtpConfigManager() {
 
           <div className="flex items-center gap-4 pt-1">
             <div className="flex items-center gap-2">
-              <Switch checked={formSecure} onCheckedChange={setFormSecure} />
+              <Switch
+                checked={formSecure}
+                onCheckedChange={(checked) => {
+                  setFormSecure(checked)
+                  const n = parseInt(formPort)
+                  if (checked && (n === 587 || n === 25 || n === 2525)) setFormPort("465")
+                  else if (!checked && n === 465) setFormPort("587")
+                }}
+              />
               <Label className="text-xs">Use TLS (SSL)</Label>
             </div>
             <div className="flex items-center gap-2">
@@ -363,6 +377,10 @@ export function SmtpConfigManager() {
               <Label className="text-xs">Enabled</Label>
             </div>
           </div>
+
+          <p className="text-[10px] text-muted-foreground -mt-1">
+            Port 465 requires TLS on · Port 587 / 25 / 2525 requires TLS off (STARTTLS). Mixing these causes the &quot;wrong version number&quot; SSL error.
+          </p>
 
           <Button
             className="w-full"

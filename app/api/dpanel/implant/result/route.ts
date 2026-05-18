@@ -30,8 +30,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: "Unknown implant" }, { status: 404 })
     }
 
-    // Find the task by task_id
-    const tasks = await listImplantTasks(result.implant_id)
+    // Find the task by task_id (use DB primary key for the FK join)
+    const tasks = await listImplantTasks(implant.id)
     const task = tasks.find(t => t.taskId === result.task_id)
     
     if (!task) {
@@ -71,7 +71,13 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: "implant_id required" }, { status: 400 })
     }
 
-    const tasks = await listImplantTasks(implantId, status as any)
+    // Resolve string implant_id → UUID primary key for the FK query
+    const { getImplantByImplantId } = await import("@/lib/db/implants")
+    const implantRecord = await getImplantByImplantId(implantId)
+    if (!implantRecord) {
+      return NextResponse.json({ error: "Unknown implant" }, { status: 404 })
+    }
+    const tasks = await listImplantTasks(implantRecord.id, status as any)
     
     // Convert to the format expected by the frontend
     const results = tasks.map(task => ({

@@ -31,6 +31,7 @@ import {
   Zap,
   Activity,
   ChevronLeft,
+  Play,
 } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -112,7 +113,8 @@ const WORKFLOW_STAGES: WorkflowStage[] = [
     dotClass: "bg-orange-400",
     modules: [
       { href: "/admin/communication/mail", label: "Mail Ops", shortDesc: "Phishing & mail", icon: Mail },
-      { href: "/admin/communication/mail/migrator", label: "Migrator", shortDesc: "IMAP XOAUTH2", icon: ArrowRightLeft },
+      { href: "/admin/operations/quick-ops", label: "Quick Ops", shortDesc: "Single-click full chain", icon: Zap },
+      { href: "/admin/operations/op-wizard", label: "Op Wizard", shortDesc: "End-to-end deploy & phish", icon: Play },
     ],
   },
   {

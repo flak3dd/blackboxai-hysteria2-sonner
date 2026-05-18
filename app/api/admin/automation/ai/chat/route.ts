@@ -35,18 +35,37 @@ function statusFromErrorCode(code?: string): number {
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    const requestId = req.headers.get("x-request-id") ?? `chat-${Date.now()}`
+    const requestId = req.headers.get("x-request-id") ?? `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     const admin = await verifyAdmin(req)
     const rateLimited = await enforceRateLimit(req, 'aiChat', admin.id)
     if (rateLimited) return rateLimited
     const adminIdSafe = admin.id.slice(0, 8)
-    const body = await req.json()
+    
+    const body = await req.json().catch(() => {
+      throw new Error('Invalid JSON in request body')
+    })
+    
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json({ 
+        error: 'Invalid request body',
+        requestId 
+      }, { status: 400 })
+    }
+    
     const input = AiChatRequest.parse(body)
     
     // Collect progress events
     const progressEvents: ProgressEvent[] = []
     
-    const result = await runChat(
+    log.info({
+      requestId,
+      adminIdSafe,
+      conversationId: input.conversationId,
+      messageLength: input.message.length
+    }, "AI chat request received")
+    
+    // Add timeout protection for AI operations
+    const chatPromise = runChat(
       input.conversationId,
       input.message,
       admin.id,
@@ -58,6 +77,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         requestId,
       },
     )
+    
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('AI chat operation timeout')), 300000) // 5 minutes
+    )
+    
+    const result = await Promise.race([chatPromise, timeoutPromise]) as any
 
     const payload = {
       requestId,
@@ -84,8 +109,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json(payload, { status })
     }
 
+    log.info({
+      requestId,
+      adminIdSafe,
+      conversationId: input.conversationId,
+      messageCount: result.messages?.length || 0
+    }, "AI chat request completed successfully")
+
     return NextResponse.json(payload)
   } catch (err) {
+    log.error({ err }, "AI chat request error")
     return toErrorResponse(err)
   }
 }

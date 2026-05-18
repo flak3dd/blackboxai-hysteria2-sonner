@@ -202,8 +202,8 @@ export async function resolveSmtpConfig(
 
   return {
     host,
-    port: parseInt(process.env.SMTP_PORT || "587"),
-    secure: process.env.SMTP_SECURE === "true",
+    port: (() => { const p = parseInt(process.env.SMTP_PORT ?? "", 10); return isNaN(p) ? 587 : p })(),
+    secure: ["true", "1"].includes((process.env.SMTP_SECURE ?? "").toLowerCase()),
     user: process.env.SMTP_USER || "",
     password: process.env.SMTP_PASS || "",
     from: process.env.MAIL_FROM || "",

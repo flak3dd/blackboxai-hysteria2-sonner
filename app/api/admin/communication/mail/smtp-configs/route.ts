@@ -30,17 +30,14 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     await verifyAdmin(req)
-    const body = await req.json()
-    const validated = SmtpConfigInput.parse(body)
-    const config = await createSmtpConfig(validated)
+    const body = await req.json().catch(() => null)
+    const parsed = SmtpConfigInput.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Invalid input", issues: parsed.error.issues }, { status: 400 })
+    }
+    const config = await createSmtpConfig(parsed.data)
     return NextResponse.json({ success: true, config })
   } catch (err) {
-    if (err instanceof Error && err.name === "ZodError") {
-      return NextResponse.json(
-        { error: "Invalid input", details: (err as any).issues },
-        { status: 400 }
-      )
-    }
     return toErrorResponse(err)
   }
 }

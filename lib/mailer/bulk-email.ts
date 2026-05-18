@@ -82,14 +82,26 @@ export function parseEmailCSV(content: string): EmailRecipient[] {
     }
     parts.push(current.trim())
 
-    // Expected: firstName, lastName, email
+    const clean = (s: string) => s?.replace(/^"|"$/g, "").trim()
+
     if (parts.length >= 3) {
+      // Standard: firstName, lastName, email[, ...extra columns]
       records.push({
-        firstName: parts[0]?.replace(/^"|"$/g, ""),
-        lastName: parts[1]?.replace(/^"|"$/g, ""),
-        email: parts[2]?.replace(/^"|"$/g, "").toLowerCase().trim(),
+        firstName: clean(parts[0]),
+        lastName: clean(parts[1]),
+        email: clean(parts[2]).toLowerCase(),
         rowNumber: i + 1,
       })
+    } else if (parts.length === 2) {
+      // name, email  OR  email, name — pick whichever column looks like an email
+      const col0 = clean(parts[0]).toLowerCase()
+      const col1 = clean(parts[1]).toLowerCase()
+      const emailCol = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(col1) ? col1 : col0
+      records.push({ firstName: "", lastName: "", email: emailCol, rowNumber: i + 1 })
+    } else if (parts.length === 1) {
+      // Plain email address per line
+      const email = clean(parts[0]).toLowerCase()
+      if (email) records.push({ firstName: "", lastName: "", email, rowNumber: i + 1 })
     }
   }
 
@@ -145,11 +157,13 @@ export function renderTemplate(
   template: string,
   recipient: EmailRecipient
 ): string {
+  // Strip CR/LF to prevent email header injection via template substitution
+  const safe = (s?: string) => (s ?? "").replace(/[\r\n]/g, " ")
   return template
-    .replace(/\{\{firstName\}\}/gi, recipient.firstName || "")
-    .replace(/\{\{lastName\}\}/gi, recipient.lastName || "")
-    .replace(/\{\{email\}\}/gi, recipient.email || "")
-    .replace(/\{\{name\}\}/gi, `${recipient.firstName || ""} ${recipient.lastName || ""}`.trim())
+    .replace(/\{\{firstName\}\}/gi, safe(recipient.firstName))
+    .replace(/\{\{lastName\}\}/gi, safe(recipient.lastName))
+    .replace(/\{\{email\}\}/gi, safe(recipient.email))
+    .replace(/\{\{name\}\}/gi, safe(`${recipient.firstName || ""} ${recipient.lastName || ""}`.trim()))
 }
 
 /* ------------------------------------------------------------------ */

