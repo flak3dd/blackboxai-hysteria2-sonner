@@ -101,3 +101,7 @@ email-attachments/
 # Backups
 *.backup
 .codebuddy
+
+# VibeCheck provenance (may contain sensitive data)
+.vibecheck/provenance/
+.vibecheck/last-score.json

@@ -1,4 +1,6 @@
 /**
+ * @jest-environment node
+ *
  * Comprehensive AI Assistant Capability Tests
  *
  * Tests all AI tool categories:
@@ -168,6 +170,15 @@ describe("AI Assistant - Comprehensive Capability Tests", () => {
       expect(generateConfigTool.parameters).toBeDefined()
       expect(typeof generateConfigTool.run).toBe("function")
     })
+
+    it("should return structured error when description is missing", async () => {
+      const result = await generateConfigTool.run({}, ctx)
+
+      expect(result).toBeDefined()
+      expect(result.error).toBe("MISSING_DESCRIPTION")
+      expect(result.errorMessage).toContain("describe what kind of Hysteria2 config")
+      expect(result.yaml).toBe("")
+    })
   })
 
   describe("☁️ Azure Deployment", () => {
@@ -246,6 +257,15 @@ describe("AI Assistant - Comprehensive Capability Tests", () => {
       const result = await getPayloadStatusTool.run({ buildId }, ctx)
       expect(result).toBeDefined()
       expect(result.found).toBe(true)
+    })
+
+    it("should return structured error when description is missing", async () => {
+      const result = await generatePayloadTool.run({}, ctx)
+
+      expect(result).toBeDefined()
+      expect(result.error).toBe("MISSING_DESCRIPTION")
+      expect(result.errorMessage).toContain("describe the payload")
+      expect(result.buildId).toBe("")
     })
   })
 
@@ -339,3 +359,4 @@ describe("AI Assistant - Comprehensive Capability Tests", () => {
     })
   })
 })
+ 

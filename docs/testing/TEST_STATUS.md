@@ -124,7 +124,7 @@ Integration tests need a PostgreSQL database to run. Options:
    - Use Supabase, Neon, or Railway
    - Set DATABASE_URL environment variable
 
-See <ref_file file="/Users/adminuser/vsc/blackboxai-hysteria2-sonner-1/tests/DATABASE_SETUP.md" /> for detailed instructions.
+See <ref_file file="/Users/adminuser/vsc/blackboxai-hysteria2-sonner-1/docs/testing/DATABASE_SETUP.md" /> for detailed instructions.
 
 ## Test Suite Statistics
 
@@ -158,8 +158,8 @@ See <ref_file file="/Users/adminuser/vsc/blackboxai-hysteria2-sonner-1/tests/DAT
 - ✅ `tests/fixtures/test-data.ts` - Test fixtures
 
 ### Documentation Files
-- ✅ `tests/README.md` - Test documentation
-- ✅ `tests/DATABASE_SETUP.md` - Database setup guide
+- ✅ `docs/testing/README.md` - Test documentation
+- ✅ `docs/testing/DATABASE_SETUP.md` - Database setup guide
 - ✅ `TEST_SUITE_SUMMARY.md` - Implementation summary
 - ✅ `TEST_STATUS.md` - This file
 

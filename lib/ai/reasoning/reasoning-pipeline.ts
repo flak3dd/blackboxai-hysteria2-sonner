@@ -13,6 +13,7 @@ import { z } from 'zod'
 import { serverEnv } from '@/lib/env'
 import { createOpenAI } from '@ai-sdk/openai'
 import { anthropic } from '@ai-sdk/anthropic'
+import { createOpenRouterOpenAICompat, getOpenRouterModelId } from '@/lib/ai/openrouter/stack'
 import logger from '@/lib/logger'
 
 const log = logger.child({ module: 'ai-reasoning-pipeline' })
@@ -406,18 +407,25 @@ type ReasoningProvider = {
 function getReasoningProvider(): ReasoningProvider {
   const env = serverEnv()
 
-  // PRIMARY: Anthropic/Claude for reasoning (best structured output quality)
+  // PRIMARY: OpenRouter — unified gateway to all models
+  if (env.OPENROUTER_API_KEY) {
+    const client = createOpenRouterOpenAICompat(env)
+    const modelId = getOpenRouterModelId(env, 'reasoning_json')
+    return { name: 'openrouter', model: client(modelId) }
+  }
+
+  // Fallback: Anthropic
   if (env.ANTHROPIC_API_KEY) {
     return { name: 'anthropic', model: anthropic(env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001') }
   }
 
-  // Fallback to OpenAI
+  // Fallback: OpenAI
   if (env.OPENAI_API_KEY) {
     const client = createOpenAI({ apiKey: env.OPENAI_API_KEY })
     return { name: 'openai', model: client('gpt-4o-mini') }
   }
 
-  // Fallback to xAI/Grok
+  // Fallback: xAI/Grok
   if (env.XAI_API_KEY) {
     const client = createOpenAI({
       baseURL: env.XAI_BASE_URL,
@@ -426,7 +434,7 @@ function getReasoningProvider(): ReasoningProvider {
     return { name: 'xai', model: client('grok-2-1212') }
   }
 
-  // Last resort: use whatever LLM_PROVIDER is configured
+  // Last resort: legacy LLM provider
   if (env.LLM_PROVIDER_API_KEY) {
     const client = createOpenAI({
       baseURL: env.LLM_PROVIDER_BASE_URL,
@@ -435,7 +443,7 @@ function getReasoningProvider(): ReasoningProvider {
     return { name: 'legacy', model: client(env.LLM_MODEL) }
   }
 
-  throw new Error('No AI provider configured for reasoning pipeline')
+  throw new Error('No AI provider configured — set OPENROUTER_API_KEY')
 }
 
 // ============================================================

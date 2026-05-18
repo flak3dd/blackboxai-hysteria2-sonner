@@ -533,18 +533,22 @@ export class RedTeamPlanner {
    */
   async pushTasksToImplants(taskIds: string[], implantIds: string[]): Promise<boolean> {
     try {
+      const { createImplantTask } = await import("@/lib/db/implants")
+
       for (const taskId of taskIds) {
         const task = this.tasks.get(taskId)
         if (!task) continue
 
-        // Update task status
         task.status = "pending"
         task.updatedAt = Date.now()
 
-        // Push to each implant
         for (const implantId of implantIds) {
-          // This would integrate with your implant management system
-          console.log(`Pushing task ${taskId} to implant ${implantId}`)
+          await createImplantTask({
+            implantId,
+            taskId,
+            type: task.type,
+            args: { commands: task.commands, title: task.title },
+          })
         }
       }
 

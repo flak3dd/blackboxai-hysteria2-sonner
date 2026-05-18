@@ -1,6 +1,8 @@
 /**
+ * @jest-environment node
+ *
  * Comprehensive AI Tools Enhancement Test Suite
- * 
+ *
  * Tests for new AI tools:
  * - security_analysis
  * - performance_optimization

@@ -1,6 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { z } from "zod"
 import { getImplantByImplantId, listImplantTasks, updateImplantTask } from "@/lib/db/implants"
+import logger from "@/lib/logger"
+
+const log = logger.child({ module: "api/dpanel/implant/result" })
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -27,8 +30,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: "Unknown implant" }, { status: 404 })
     }
 
-    // Find the task by task_id
-    const tasks = await listImplantTasks(result.implant_id)
+    // Find the task by task_id (use DB primary key for the FK join)
+    const tasks = await listImplantTasks(implant.id)
     const task = tasks.find(t => t.taskId === result.task_id)
     
     if (!task) {
@@ -52,7 +55,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       received: true
     })
   } catch (error) {
-    console.error('Task result error:', error)
+    log.error({ err: error }, 'Task result error')
     return NextResponse.json({ error: "Invalid request" }, { status: 400 })
   }
 }
@@ -68,7 +71,13 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: "implant_id required" }, { status: 400 })
     }
 
-    const tasks = await listImplantTasks(implantId, status as any)
+    // Resolve string implant_id → UUID primary key for the FK query
+    const { getImplantByImplantId } = await import("@/lib/db/implants")
+    const implantRecord = await getImplantByImplantId(implantId)
+    if (!implantRecord) {
+      return NextResponse.json({ error: "Unknown implant" }, { status: 404 })
+    }
+    const tasks = await listImplantTasks(implantRecord.id, status as any)
     
     // Convert to the format expected by the frontend
     const results = tasks.map(task => ({
@@ -86,7 +95,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       total: results.length
     })
   } catch (error) {
-    console.error('Get results error:', error)
+    log.error({ err: error }, 'Get results error')
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

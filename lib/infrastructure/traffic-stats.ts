@@ -1,5 +1,6 @@
 import { serverEnv } from "@/lib/env"
 import logger from "@/lib/logger"
+import { prisma } from "@/lib/db"
 
 const trafficStatsLogger = logger.child({ module: 'traffic-stats' })
 
@@ -173,7 +174,18 @@ export class TrafficStatsCollector {
         const data = await this.fetchFromAPI('/streams')
         const streams = (data as { streams: unknown[] }).streams || []
         trafficStatsLogger.info(`Fetched ${streams.length} active streams`)
-        return streams as any[]
+        return streams as Array<{
+          state: string
+          auth: string
+          connection: number
+          stream: number
+          req_addr: string
+          hooked_req_addr: string
+          tx: number
+          rx: number
+          initial_at: string
+          last_active_at: string
+        }>
       } catch (error) {
         trafficStatsLogger.warn(`Failed to fetch streams, returning empty: ${error}`)
         return []
@@ -322,6 +334,316 @@ export class TrafficStatsCollector {
       size: this.cache.size,
       keys: Array.from(this.cache.keys()),
     }
+  }
+
+  /**
+   * Store traffic stats in database
+   */
+  async storeTrafficStats(nodeId: string, trafficData: Record<string, TrafficStats>, onlineData: Record<string, number>): Promise<void> {
+    try {
+      const records = []
+      const timestamp = new Date()
+
+      for (const [authToken, stats] of Object.entries(trafficData)) {
+        // Find user by auth token (would need user lookup)
+        // For now, we'll store without userId and link it later
+        records.push({
+          nodeId,
+          userId: null, // Will be updated when we map authToken to userId
+          bytesIn: BigInt(stats.rx),
+          bytesOut: BigInt(stats.tx),
+          connections: onlineData[authToken] || 0,
+          recordedAt: timestamp,
+        })
+      }
+
+      if (records.length > 0) {
+        await prisma.trafficStats.createMany({
+          data: records,
+          skipDuplicates: true,
+        })
+        trafficStatsLogger.info(`Stored ${records.length} traffic stats records for node ${nodeId}`)
+      }
+    } catch (error) {
+      trafficStatsLogger.error(`Failed to store traffic stats: ${error}`)
+      throw error
+    }
+  }
+
+  /**
+   * Query traffic stats with filtering
+   */
+  async queryTrafficStats(options: {
+    nodeId?: string
+    userId?: string
+    startTime?: Date
+    endTime?: Date
+    limit?: number
+  } = {}): Promise<Array<{
+    id: string
+    nodeId: string
+    userId: string | null
+    bytesIn: bigint
+    bytesOut: bigint
+    connections: number
+    recordedAt: Date
+  }>> {
+    const where: Record<string, unknown> = {}
+
+    if (options.nodeId) {
+      where.nodeId = options.nodeId
+    }
+    if (options.userId) {
+      where.userId = options.userId
+    }
+    if (options.startTime || options.endTime) {
+      where.recordedAt = {}
+      if (options.startTime) {
+        where.recordedAt = { ...where.recordedAt as Record<string, unknown>, gte: options.startTime }
+      }
+      if (options.endTime) {
+        where.recordedAt = { ...where.recordedAt as Record<string, unknown>, lte: options.endTime }
+      }
+    }
+
+    return prisma.trafficStats.findMany({
+      where,
+      orderBy: { recordedAt: 'desc' },
+      take: options.limit || 100,
+    })
+  }
+
+  /**
+   * Get aggregated traffic statistics
+   */
+  async getAggregatedStats(options: {
+    nodeId?: string
+    userId?: string
+    startTime?: Date
+    endTime?: Date
+    groupBy?: 'hour' | 'day' | 'week'
+  } = {}): Promise<{
+    totalBytesIn: bigint
+    totalBytesOut: bigint
+    totalConnections: number
+    recordCount: number
+    avgBytesInPerRecord: bigint
+    avgBytesOutPerRecord: bigint
+    timeSeries?: Array<{
+      period: string
+      bytesIn: bigint
+      bytesOut: bigint
+      connections: number
+    }>
+  }> {
+    const where: Record<string, unknown> = {}
+
+    if (options.nodeId) {
+      where.nodeId = options.nodeId
+    }
+    if (options.userId) {
+      where.userId = options.userId
+    }
+    if (options.startTime || options.endTime) {
+      where.recordedAt = {}
+      if (options.startTime) {
+        where.recordedAt = { ...where.recordedAt as Record<string, unknown>, gte: options.startTime }
+      }
+      if (options.endTime) {
+        where.recordedAt = { ...where.recordedAt as Record<string, unknown>, lte: options.endTime }
+      }
+    }
+
+    const records = await prisma.trafficStats.findMany({
+      where,
+      orderBy: { recordedAt: 'desc' },
+    })
+
+    const totalBytesIn = records.reduce((sum, r) => sum + r.bytesIn, BigInt(0))
+    const totalBytesOut = records.reduce((sum, r) => sum + r.bytesOut, BigInt(0))
+    const totalConnections = records.reduce((sum, r) => sum + r.connections, 0)
+
+    let timeSeries: Array<{ period: string; bytesIn: bigint; bytesOut: bigint; connections: number }> | undefined
+
+    if (options.groupBy && records.length > 0) {
+      const grouped = new Map<string, { bytesIn: bigint; bytesOut: bigint; connections: number }>()
+
+      for (const record of records) {
+        const date = new Date(record.recordedAt)
+        let period: string
+
+        switch (options.groupBy) {
+          case 'hour':
+            period = date.toISOString().slice(0, 13) + ':00'
+            break
+          case 'day':
+            period = date.toISOString().slice(0, 10)
+            break
+          case 'week':
+            const weekStart = new Date(date)
+            weekStart.setDate(date.getDate() - date.getDay())
+            period = weekStart.toISOString().slice(0, 10)
+            break
+          default:
+            period = date.toISOString().slice(0, 10)
+        }
+
+        const existing = grouped.get(period) || { bytesIn: BigInt(0), bytesOut: BigInt(0), connections: 0 }
+        existing.bytesIn += record.bytesIn
+        existing.bytesOut += record.bytesOut
+        existing.connections += record.connections
+        grouped.set(period, existing)
+      }
+
+      timeSeries = Array.from(grouped.entries())
+        .map(([period, data]) => ({ period, ...data }))
+        .sort((a, b) => a.period.localeCompare(b.period))
+    }
+
+    return {
+      totalBytesIn,
+      totalBytesOut,
+      totalConnections,
+      recordCount: records.length,
+      avgBytesInPerRecord: records.length > 0 ? totalBytesIn / BigInt(records.length) : BigInt(0),
+      avgBytesOutPerRecord: records.length > 0 ? totalBytesOut / BigInt(records.length) : BigInt(0),
+      timeSeries,
+    }
+  }
+
+  /**
+   * Get per-user traffic summary
+   */
+  async getUserTrafficSummary(userId: string, days: number = 7): Promise<{
+    totalBytesIn: bigint
+    totalBytesOut: bigint
+    totalBytes: bigint
+    totalConnections: number
+    avgDailyBytesIn: bigint
+    avgDailyBytesOut: bigint
+    dailyBreakdown: Array<{
+      date: string
+      bytesIn: bigint
+      bytesOut: bigint
+      connections: number
+    }>
+  }> {
+    const startTime = new Date()
+    startTime.setDate(startTime.getDate() - days)
+
+    const records = await prisma.trafficStats.findMany({
+      where: {
+        userId,
+        recordedAt: { gte: startTime },
+      },
+      orderBy: { recordedAt: 'asc' },
+    })
+
+    const totalBytesIn = records.reduce((sum, r) => sum + r.bytesIn, BigInt(0))
+    const totalBytesOut = records.reduce((sum, r) => sum + r.bytesOut, BigInt(0))
+    const totalConnections = records.reduce((sum, r) => sum + r.connections, 0)
+
+    // Group by day
+    const dailyMap = new Map<string, { bytesIn: bigint; bytesOut: bigint; connections: number }>()
+    for (const record of records) {
+      const date = record.recordedAt.toISOString().slice(0, 10)
+      const existing = dailyMap.get(date) || { bytesIn: BigInt(0), bytesOut: BigInt(0), connections: 0 }
+      existing.bytesIn += record.bytesIn
+      existing.bytesOut += record.bytesOut
+      existing.connections += record.connections
+      dailyMap.set(date, existing)
+    }
+
+    const dailyBreakdown = Array.from(dailyMap.entries())
+      .map(([date, data]) => ({ date, ...data }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+
+    return {
+      totalBytesIn,
+      totalBytesOut,
+      totalBytes: totalBytesIn + totalBytesOut,
+      totalConnections,
+      avgDailyBytesIn: days > 0 ? totalBytesIn / BigInt(days) : BigInt(0),
+      avgDailyBytesOut: days > 0 ? totalBytesOut / BigInt(days) : BigInt(0),
+      dailyBreakdown,
+    }
+  }
+
+  /**
+   * Get node-level traffic analysis
+   */
+  async getNodeTrafficAnalysis(nodeId: string, hours: number = 24): Promise<{
+    nodeId: string
+    totalBytesIn: bigint
+    totalBytesOut: bigint
+    totalBytes: bigint
+    peakConnections: number
+    avgConnections: number
+    hourlyBreakdown: Array<{
+      hour: string
+      bytesIn: bigint
+      bytesOut: bigint
+      connections: number
+    }>
+  }> {
+    const startTime = new Date()
+    startTime.setHours(startTime.getHours() - hours)
+
+    const records = await prisma.trafficStats.findMany({
+      where: {
+        nodeId,
+        recordedAt: { gte: startTime },
+      },
+      orderBy: { recordedAt: 'asc' },
+    })
+
+    const totalBytesIn = records.reduce((sum, r) => sum + r.bytesIn, BigInt(0))
+    const totalBytesOut = records.reduce((sum, r) => sum + r.bytesOut, BigInt(0))
+    const totalConnections = records.reduce((sum, r) => sum + r.connections, 0)
+    const peakConnections = records.length > 0 ? Math.max(...records.map(r => r.connections)) : 0
+    const avgConnections = records.length > 0 ? totalConnections / records.length : 0
+
+    // Group by hour
+    const hourlyMap = new Map<string, { bytesIn: bigint; bytesOut: bigint; connections: number }>()
+    for (const record of records) {
+      const hour = record.recordedAt.toISOString().slice(0, 13) + ':00'
+      const existing = hourlyMap.get(hour) || { bytesIn: BigInt(0), bytesOut: BigInt(0), connections: 0 }
+      existing.bytesIn += record.bytesIn
+      existing.bytesOut += record.bytesOut
+      existing.connections += record.connections
+      hourlyMap.set(hour, existing)
+    }
+
+    const hourlyBreakdown = Array.from(hourlyMap.entries())
+      .map(([hour, data]) => ({ hour, ...data }))
+      .sort((a, b) => a.hour.localeCompare(b.hour))
+
+    return {
+      nodeId,
+      totalBytesIn,
+      totalBytesOut,
+      totalBytes: totalBytesIn + totalBytesOut,
+      peakConnections,
+      avgConnections,
+      hourlyBreakdown,
+    }
+  }
+
+  /**
+   * Cleanup old traffic stats records
+   */
+  async cleanupOldStats(daysToKeep: number = 30): Promise<number> {
+    const cutoffDate = new Date()
+    cutoffDate.setDate(cutoffDate.getDate() - daysToKeep)
+
+    const result = await prisma.trafficStats.deleteMany({
+      where: {
+        recordedAt: { lt: cutoffDate },
+      },
+    })
+
+    trafficStatsLogger.info(`Cleaned up ${result.count} old traffic stats records`)
+    return result.count
   }
 }
 

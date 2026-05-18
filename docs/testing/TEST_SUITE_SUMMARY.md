@@ -183,7 +183,7 @@ Added test scripts:
 
 ### 8. Documentation
 
-**Test Documentation (`tests/README.md`)**
+**Test Documentation (`docs/testing/README.md`)**
 - Comprehensive test suite overview
 - Detailed test structure explanation
 - Test categories and descriptions

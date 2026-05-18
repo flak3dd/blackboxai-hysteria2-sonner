@@ -1,6 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   serverExternalPackages: ["ssh2", "bullmq", "ioredis"],
+
+  // Allow Next.js dev resources (HMR, RSC payload) to be served to the
+  // Cloudflare tunnel hostname so the panel can be accessed at the public
+  // URL without breaking React hydration. See: panel_url_localhost validator.
+  allowedDevOrigins: ["panel.anzstaff-club.au"],
   // Production deployment configuration
   output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
   // Enable compression for production
@@ -23,7 +28,6 @@ const nextConfig = {
   // Bundle optimization - tree-shake heavy packages
   experimental: {
     optimizePackageImports: [
-      'lucide-react',
       '@radix-ui/react-icons',
       '@radix-ui/react-dialog',
       'date-fns',
@@ -34,6 +38,13 @@ const nextConfig = {
   // Turbopack root configuration (fixes warning about multiple lockfiles)
   turbopack: {
     root: __dirname,
+    // Redirect lucide-react imports to a proxy that only exports canonical names.
+    // Turbopack's built-in optimizePackageImports for lucide-react creates broken
+    // bindings for *Icon aliases (e.g. XIcon, Loader2) because individual icon
+    // files only export their canonical name as default. The proxy avoids this.
+    resolveAlias: {
+      'lucide-react': './lib/lucide-proxy.mjs',
+    },
   },
 
   // Compiler optimizations
@@ -46,38 +57,18 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
 
-  // Security headers
+  // Security headers (moved to proxy.ts)
   async headers() {
     return [
-      {
-        source: '/(.*)',
-        headers: [
-          { key: 'X-Frame-Options', value: 'DENY' },
-          { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'Referrer-Policy', value: 'origin-when-cross-origin' },
-          { key: 'X-XSS-Protection', value: '1; mode=block' },
-          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
-        ],
-      },
       {
         source: '/api/:path*',
         headers: [
           { key: 'Cache-Control', value: 'no-store, max-age=0' },
         ],
       },
-      {
-        source: '/_next/static/:path*',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
-      },
     ];
   },
 
-  // Environment variables
-  env: {
-    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-  },
 };
 
 module.exports = nextConfig;

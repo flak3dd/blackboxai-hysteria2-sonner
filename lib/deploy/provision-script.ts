@@ -14,6 +14,8 @@ export type ProvisionScriptOpts = {
   email?: string
   bandwidthUp?: string
   bandwidthDown?: string
+  /** Public tunnel URL to use for auth backend when panel runs locally (e.g. Cloudflare Tunnel) */
+  cloudflareTunnelUrl?: string
 }
 
 export function buildProvisionScript(opts: ProvisionScriptOpts): string {
@@ -41,7 +43,16 @@ export function buildProvisionScript(opts: ProvisionScriptOpts): string {
       ? `\nbandwidth:${opts.bandwidthUp ? `\n  up: "${opts.bandwidthUp}"` : ""}${opts.bandwidthDown ? `\n  down: "${opts.bandwidthDown}"` : ""}`
       : ""
 
-  const authUrl = `${opts.panelUrl}/api/hysteria/auth`
+  // Use cloudflareTunnelUrl for auth if provided (panel may be on localhost),
+  // otherwise fall back to panelUrl directly.
+  const authBaseUrl = opts.cloudflareTunnelUrl || opts.panelUrl
+  const authUrl = `${authBaseUrl}/api/hysteria/auth`
+
+  // If authBackendSecret is configured, include it in the Hysteria config
+  // so the node sends it as the X-Auth-Secret header with each auth request.
+  const authSecretBlock = opts.authBackendSecret
+    ? `\n    secret: "${opts.authBackendSecret}"`
+    : ""
 
   const hysteriaConfig = `listen: "${listen}"
 
@@ -50,7 +61,7 @@ ${tlsBlock}${obfsBlock}${bwBlock}
 auth:
   type: http
   http:
-    url: "${authUrl}"
+    url: "${authUrl}"${authSecretBlock}
     insecure: false
 
 trafficStats:

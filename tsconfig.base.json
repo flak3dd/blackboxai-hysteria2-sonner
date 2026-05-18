@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["dom", "dom.iterable", "ES2022"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@c2panel/shared": ["./packages/shared/src"],
+      "@c2panel/shared/*": ["./packages/shared/src/*"],
+      "@c2panel/infrastructure": ["./packages/infrastructure/src"],
+      "@c2panel/infrastructure/*": ["./packages/infrastructure/src/*"],
+      "@c2panel/ai": ["./packages/ai/src"],
+      "@c2panel/ai/*": ["./packages/ai/src/*"],
+      "@c2panel/c2": ["./packages/c2/src"],
+      "@c2panel/c2/*": ["./packages/c2/src/*"],
+      "@c2panel/security": ["./packages/security/src"],
+      "@c2panel/security/*": ["./packages/security/src/*"],
+      "@c2panel/osint": ["./packages/osint/src"],
+      "@c2panel/osint/*": ["./packages/osint/src/*"],
+      "@c2panel/ui": ["./packages/ui/src"],
+      "@c2panel/ui/*": ["./packages/ui/src/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules", "**/*.test.ts", "**/*.spec.ts", "**/tests/**", "**/__tests__/**"]
+}

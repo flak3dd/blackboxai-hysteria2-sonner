@@ -18,20 +18,28 @@
 import { createOpenAI } from '@ai-sdk/openai'
 import { anthropic } from '@ai-sdk/anthropic'
 import { serverEnv } from '@/lib/env'
+import { createOpenRouterOpenAICompat, getOpenRouterModelId } from '@/lib/ai/openrouter/stack'
 
 let cachedModel: { name: string; model: any } | null = null
 
 /**
  * Get the extractor model for structured output generation.
  * Caches the model instance for reuse across calls.
- * xAI/Grok is the PRIMARY provider (most reliably available).
+ * OpenRouter is the PRIMARY provider.
  */
 export function getExtractorModel() {
   if (cachedModel) return cachedModel.model
 
   const env = serverEnv()
 
-  // PRIMARY: xAI/Grok (fast, reliable, always available)
+  // PRIMARY: OpenRouter — unified gateway
+  if (env.OPENROUTER_API_KEY) {
+    const client = createOpenRouterOpenAICompat(env)
+    cachedModel = { name: 'openrouter', model: client(getOpenRouterModelId(env, 'chat_tooling')) }
+    return cachedModel.model
+  }
+
+  // Fallback: xAI/Grok
   if (env.XAI_API_KEY) {
     const client = createOpenAI({
       baseURL: env.XAI_BASE_URL,
@@ -41,21 +49,21 @@ export function getExtractorModel() {
     return cachedModel.model
   }
 
-  // Fallback to OpenAI
+  // Fallback: OpenAI
   if (env.OPENAI_API_KEY) {
     const client = createOpenAI({ apiKey: env.OPENAI_API_KEY })
     cachedModel = { name: 'openai', model: client('gpt-4o-mini') }
     return cachedModel.model
   }
 
-  // Fallback to Anthropic/Claude (may fail if key is invalid/expired)
+  // Fallback: Anthropic/Claude
   if (env.ANTHROPIC_API_KEY) {
     const modelName = env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001'
     cachedModel = { name: 'anthropic', model: anthropic(modelName) }
     return cachedModel.model
   }
 
-  // Last resort: use whatever LLM_PROVIDER is configured
+  // Last resort: legacy LLM provider
   if (env.LLM_PROVIDER_API_KEY) {
     const client = createOpenAI({
       baseURL: env.LLM_PROVIDER_BASE_URL,
@@ -65,7 +73,7 @@ export function getExtractorModel() {
     return cachedModel.model
   }
 
-  throw new Error('No AI provider configured for structured extraction')
+  throw new Error('No AI provider configured — set OPENROUTER_API_KEY')
 }
 
 /**

@@ -57,7 +57,7 @@ async function login() {
 async function createConversation(title: string) {
   console.log(`📝 Creating conversation: ${title}`);
   
-  const response = await fetch(`${BASE_URL}/api/admin/ai/conversations`, {
+  const response = await fetch(`${BASE_URL}/api/admin/automation/ai/conversations`, {
     method: "POST",
     headers: { 
       "Content-Type": "application/json",
@@ -80,7 +80,7 @@ async function createConversation(title: string) {
 async function sendChatPrompt(prompt: string, conversationId: string) {
   console.log(`\n📤 Sending prompt: "${prompt}"`);
   
-  const response = await fetch(`${BASE_URL}/api/admin/ai/chat`, {
+  const response = await fetch(`${BASE_URL}/api/admin/automation/ai/chat`, {
     method: "POST",
     headers: { 
       "Content-Type": "application/json",

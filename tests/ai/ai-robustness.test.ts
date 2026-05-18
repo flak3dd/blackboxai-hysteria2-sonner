@@ -10,6 +10,7 @@ const AI_ENV_KEYS = [
   'LLM_PROVIDER_API_KEY',
   'ANTHROPIC_API_KEY',
   'GOOGLE_API_KEY',
+  'OPENAI_API_KEY',
 ] as const
 
 const originalEnv = AI_ENV_KEYS.reduce<Record<string, string | undefined>>((acc, key) => {

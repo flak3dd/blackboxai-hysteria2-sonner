@@ -31,7 +31,7 @@ import {
   Zap,
   Activity,
   ChevronLeft,
-  ChevronRight as ChevronRightIcon,
+  Play,
 } from "lucide-react"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -72,9 +72,9 @@ const WORKFLOW_STAGES: WorkflowStage[] = [
     accentClass: "text-blue-400",
     dotClass: "bg-blue-400",
     modules: [
-      { href: "/admin/osint", label: "OSINT", shortDesc: "Intelligence gathering", icon: Globe },
-      { href: "/admin/network", label: "Network Map", shortDesc: "Passive recon", icon: Network },
-      { href: "/admin/threat", label: "Threat Intel", shortDesc: "IOC feeds", icon: ShieldAlert },
+      { href: "/admin/intelligence/osint", label: "OSINT", shortDesc: "Intelligence gathering", icon: Globe },
+      { href: "/admin/operations/network", label: "Network Map", shortDesc: "Passive recon", icon: Network },
+      { href: "/admin/security/threat", label: "Threat Intel", shortDesc: "IOC feeds", icon: ShieldAlert },
     ],
   },
   {
@@ -84,12 +84,12 @@ const WORKFLOW_STAGES: WorkflowStage[] = [
     accentClass: "text-emerald-400",
     dotClass: "bg-emerald-400",
     modules: [
-      { href: "/admin/nodes", label: "Nodes", shortDesc: "Server fleet", icon: Server },
-      { href: "/admin/transport", label: "Protocols", shortDesc: "Transport config", icon: Radio },
-      { href: "/admin/configs", label: "Configs", shortDesc: "Client configs", icon: FileCode },
-      { href: "/admin/infrastructure", label: "Deployment", shortDesc: "Infra management", icon: Rocket },
-      { href: "/admin/infrastructure/traffic", label: "Traffic", shortDesc: "Routing & failover", icon: ArrowRightLeft },
-      { href: "/admin/config-audit", label: "Config Audit", shortDesc: "Strength testing", icon: ShieldAlert },
+      { href: "/admin/operations/nodes", label: "Nodes", shortDesc: "Server fleet", icon: Server },
+      { href: "/admin/operations/transport", label: "Protocols", shortDesc: "Transport config", icon: Radio },
+      { href: "/admin/configuration/configs", label: "Configs", shortDesc: "Client configs", icon: FileCode },
+      { href: "/admin/operations/infrastructure", label: "Deployment", shortDesc: "Infra management", icon: Rocket },
+      { href: "/admin/operations/infrastructure/traffic", label: "Traffic", shortDesc: "Routing & failover", icon: ArrowRightLeft },
+      { href: "/admin/configuration/config-audit", label: "Config Audit", shortDesc: "Strength testing", icon: ShieldAlert },
     ],
   },
   {
@@ -99,10 +99,10 @@ const WORKFLOW_STAGES: WorkflowStage[] = [
     accentClass: "text-amber-400",
     dotClass: "bg-amber-400",
     modules: [
-      { href: "/admin/payloads", label: "Payloads", shortDesc: "Payload generation", icon: Sword },
-      { href: "/admin/implants", label: "Implants", shortDesc: "Implant management", icon: Crosshair },
+      { href: "/admin/security/payloads", label: "Payloads", shortDesc: "Payload generation", icon: Sword },
+      { href: "/admin/security/implants", label: "Implants", shortDesc: "Implant management", icon: Crosshair },
       { href: "/admin/lotl", label: "LotL Arsenal", shortDesc: "Living off the land", icon: Zap },
-      { href: "/admin/profiles", label: "Profiles", shortDesc: "C2 profiles", icon: UserCircle },
+      { href: "/admin/configuration/profiles", label: "Profiles", shortDesc: "C2 profiles", icon: UserCircle },
     ],
   },
   {
@@ -112,8 +112,9 @@ const WORKFLOW_STAGES: WorkflowStage[] = [
     accentClass: "text-orange-400",
     dotClass: "bg-orange-400",
     modules: [
-      { href: "/admin/mail", label: "Mail Ops", shortDesc: "Phishing & mail", icon: Mail },
-      { href: "/admin/mail/migrator", label: "Migrator", shortDesc: "IMAP XOAUTH2", icon: ArrowRightLeft },
+      { href: "/admin/communication/mail", label: "Mail Ops", shortDesc: "Phishing & mail", icon: Mail },
+      { href: "/admin/operations/quick-ops", label: "Quick Ops", shortDesc: "Single-click full chain", icon: Zap },
+      { href: "/admin/operations/op-wizard", label: "Op Wizard", shortDesc: "End-to-end deploy & phish", icon: Play },
     ],
   },
   {
@@ -123,10 +124,10 @@ const WORKFLOW_STAGES: WorkflowStage[] = [
     accentClass: "text-red-400",
     dotClass: "bg-red-400",
     modules: [
-      { href: "/admin/coordination", label: "Team Ops", shortDesc: "Multi-operator", icon: Users },
-      { href: "/admin/forensics", label: "Anti-Forensics", shortDesc: "Evidence control", icon: Fingerprint },
-      { href: "/admin/ai", label: "AI Assistant", shortDesc: "Chat + ShadowGrok C2", icon: Cpu },
-      { href: "/admin/workflow", label: "Workflow", shortDesc: "AI orchestration", icon: Workflow },
+      { href: "/admin/intelligence/coordination", label: "Team Ops", shortDesc: "Multi-operator", icon: Users },
+      { href: "/admin/security/forensics", label: "Anti-Forensics", shortDesc: "Evidence control", icon: Fingerprint },
+      { href: "/admin/automation/ai", label: "AI Assistant", shortDesc: "Chat + ShadowGrok C2", icon: Cpu },
+      { href: "/admin/automation/workflow", label: "Workflow", shortDesc: "AI orchestration", icon: Workflow },
     ],
   },
   {
@@ -136,9 +137,9 @@ const WORKFLOW_STAGES: WorkflowStage[] = [
     accentClass: "text-violet-400",
     dotClass: "bg-violet-400",
     modules: [
-      { href: "/admin/analytics", label: "Analytics", shortDesc: "Behavioral analysis", icon: BarChart3 },
-      { href: "/admin/workflow/analytics", label: "Workflow Analytics", shortDesc: "Workflow metrics", icon: Activity },
-      { href: "/admin/reports", label: "Reports", shortDesc: "Auto-generated", icon: FileText },
+      { href: "/admin/intelligence/analytics", label: "Analytics", shortDesc: "Behavioral analysis", icon: BarChart3 },
+      { href: "/admin/automation/workflow/analytics", label: "Workflow Analytics", shortDesc: "Workflow metrics", icon: Activity },
+      { href: "/admin/intelligence/reports", label: "Reports", shortDesc: "Auto-generated", icon: FileText },
     ],
   },
 ]
@@ -211,7 +212,7 @@ export function AdminSidebar() {
           className="h-7 w-7"
         >
           {isCollapsed ? (
-            <ChevronRightIcon className="h-4 w-4" />
+            <ChevronRight className="h-4 w-4" />
           ) : (
             <ChevronLeft className="h-4 w-4" />
           )}
@@ -349,11 +350,11 @@ export function AdminSidebar() {
           <TooltipTrigger
             render={
               <Link
-                href="/admin/settings"
+                href="/admin/configuration/settings"
                 className={cn(
                   "flex items-center rounded-lg transition-colors",
                   isCollapsed ? "justify-center px-2 py-2" : "gap-2.5 px-3 py-2",
-                  pathname === "/admin/settings"
+                  pathname === "/admin/configuration/settings"
                     ? "bg-primary/10 text-primary font-medium"
                     : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                 )}

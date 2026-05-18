@@ -6,20 +6,20 @@ import { cn } from "@/lib/utils"
 
 const LINKS = [
   { href: "/admin", label: "Dashboard" },
-  { href: "/admin/nodes", label: "Infrastructure" },
-  { href: "/admin/beacons", label: "Beacons" },
-  { href: "/admin/transport", label: "Protocols" },
-  { href: "/admin/payloads", label: "Payloads" },
-  { href: "/admin/osint", label: "OSINT" },
-  { href: "/admin/network", label: "Network" },
+  { href: "/admin/operations/nodes", label: "Infrastructure" },
+  { href: "/admin/security/beacons", label: "Beacons" },
+  { href: "/admin/operations/transport", label: "Protocols" },
+  { href: "/admin/security/payloads", label: "Payloads" },
+  { href: "/admin/intelligence/osint", label: "OSINT" },
+  { href: "/admin/operations/network", label: "Network" },
   { href: "/admin/lotl", label: "LotL Arsenal" },
-  { href: "/admin/forensics", label: "Anti-Forensics" },
-  { href: "/admin/threat", label: "Threat Intel" },
-  { href: "/admin/analytics", label: "Analytics" },
-  { href: "/admin/coordination", label: "Team Ops" },
-  { href: "/admin/mail", label: "Mail Test" },
-  { href: "/admin/mail/migrator", label: "Migrator" },
-  { href: "/admin/reports", label: "Reports" },
+  { href: "/admin/security/forensics", label: "Anti-Forensics" },
+  { href: "/admin/security/threat", label: "Threat Intel" },
+  { href: "/admin/intelligence/analytics", label: "Analytics" },
+  { href: "/admin/intelligence/coordination", label: "Team Ops" },
+  { href: "/admin/communication/mail", label: "Mail Test" },
+  { href: "/admin/communication/mail/migrator", label: "Migrator" },
+  { href: "/admin/intelligence/reports", label: "Reports" },
 ]
 
 export function AdminNav() {

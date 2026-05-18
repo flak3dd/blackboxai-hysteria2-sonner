@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  *
- * Unit tests for app/api/admin/nodes/route.ts
+ * Unit tests for app/api/admin/operations/nodes/route.ts
  *
  * All external dependencies (auth, DB, next/server internals) are mocked so
  * the tests run without a database connection.
@@ -27,7 +27,7 @@ jest.mock("@/lib/db/nodes", () => ({
   countNodes: jest.fn(),
 }))
 
-import { GET, POST } from "@/app/api/admin/nodes/route"
+import { GET, POST } from "@/app/api/admin/operations/nodes/route"
 import { verifyAdmin } from "@/lib/auth/admin"
 import { listNodes, createNode, countNodes } from "@/lib/db/nodes"
 
@@ -55,7 +55,7 @@ function makeNode(id = "n1") {
 
 function makeRequest(opts: { body?: unknown; authHeader?: string } = {}) {
   return {
-    url: "http://localhost/api/admin/nodes",
+    url: "http://localhost/api/admin/operations/nodes",
     headers: {
       get: (name: string) =>
         name.toLowerCase() === "authorization"
@@ -69,9 +69,9 @@ function makeRequest(opts: { body?: unknown; authHeader?: string } = {}) {
 beforeEach(() => jest.clearAllMocks())
 
 /* ------------------------------------------------------------------ */
-/*  GET /api/admin/nodes                                               */
+/*  GET /api/admin/operations/nodes                                               */
 /* ------------------------------------------------------------------ */
-describe("GET /api/admin/nodes", () => {
+describe("GET /api/admin/operations/nodes", () => {
   it("returns nodes list when authenticated", async () => {
     mockVerifyAdmin.mockResolvedValue({ id: "op1", username: "admin", role: "ADMIN" })
     mockListNodes.mockResolvedValue([makeNode()])
@@ -111,9 +111,9 @@ describe("GET /api/admin/nodes", () => {
 })
 
 /* ------------------------------------------------------------------ */
-/*  POST /api/admin/nodes                                              */
+/*  POST /api/admin/operations/nodes                                              */
 /* ------------------------------------------------------------------ */
-describe("POST /api/admin/nodes", () => {
+describe("POST /api/admin/operations/nodes", () => {
   const validBody = { name: "node-1", hostname: "10.0.0.1" }
 
   it("creates and returns a node with status 201", async () => {

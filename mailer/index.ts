@@ -1,5 +1,5 @@
 /**
- * Re-export ShadowGrok mailer API (implementation lives in mailer-service/).
+ * Re-export ShadowGrok Enhanced Mailer API (implementation lives in mailer-service/).
  * Routes import `@/mailer/index` per project conventions.
  */
 export {
@@ -11,5 +11,12 @@ export {
   createReadmePayload,
   createBinaryPayload,
   PayloadTemplates,
+  main as mailerCli,
   type PayloadAttachment,
+  type TransportKind,
+  type MailInput,
+  type SmtpConfig,
+  type ApiConfig,
+  type SendTunnelScriptOptions,
+  type SendNotificationOptions,
 } from '../mailer-service/index'

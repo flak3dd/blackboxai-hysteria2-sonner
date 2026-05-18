@@ -1,8 +1,16 @@
 /**
  * @jest-environment node
  *
- * Unit tests for app/api/admin/implants/route.ts
+ * Unit tests for app/api/admin/security/implants/route.ts
  */
+
+jest.mock("@/lib/auth/admin", () => ({
+  verifyAdmin: jest.fn().mockResolvedValue({ id: "test-admin", role: "admin" }),
+  toErrorResponse: jest.fn((err: unknown) => {
+    const { NextResponse } = require("next/server")
+    return NextResponse.json({ error: String(err) }, { status: 500 })
+  }),
+}))
 
 jest.mock("@/lib/db/implants", () => ({
   listImplants: jest.fn(),
@@ -11,7 +19,7 @@ jest.mock("@/lib/db/implants", () => ({
   countImplants: jest.fn(),
 }))
 
-import { GET, POST } from "@/app/api/admin/implants/route"
+import { GET, POST } from "@/app/api/admin/security/implants/route"
 import { listImplants, createImplant, getImplantStats, countImplants } from "@/lib/db/implants"
 
 const mockListImplants = listImplants as jest.Mock
@@ -41,7 +49,7 @@ const defaultStats = { total: 1, active: 1, inactive: 0, compromised: 0 }
 
 function makeRequest(body?: unknown) {
   return {
-    url: "http://localhost/api/admin/implants",
+    url: "http://localhost/api/admin/security/implants",
     headers: { get: () => null },
     json: jest.fn().mockResolvedValue(body ?? {}),
   } as any
@@ -50,9 +58,9 @@ function makeRequest(body?: unknown) {
 beforeEach(() => jest.clearAllMocks())
 
 /* ------------------------------------------------------------------ */
-/*  GET /api/admin/implants                                            */
+/*  GET /api/admin/security/implants                                            */
 /* ------------------------------------------------------------------ */
-describe("GET /api/admin/implants", () => {
+describe("GET /api/admin/security/implants", () => {
   it("returns implants list, pagination, and stats", async () => {
     mockListImplants.mockResolvedValue([makeImplant()])
     mockCountImplants.mockResolvedValue(1)
@@ -93,9 +101,9 @@ describe("GET /api/admin/implants", () => {
 })
 
 /* ------------------------------------------------------------------ */
-/*  POST /api/admin/implants                                           */
+/*  POST /api/admin/security/implants                                           */
 /* ------------------------------------------------------------------ */
-describe("POST /api/admin/implants", () => {
+describe("POST /api/admin/security/implants", () => {
   const validBody = {
     name: "dropper",
     type: "shell",

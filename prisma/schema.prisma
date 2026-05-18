@@ -304,9 +304,12 @@ model PayloadBuild {
   id              String   @id @default(cuid())
   name            String
   type            String
+  platform        String?
   description     String?
   status          String   @default("pending")
   config          Json
+  obfuscationLevel Int     @default(1)
+  packingMethod   String?
   downloadUrl     String?
   sizeBytes       BigInt?
   buildLogs       Json     @default("[]")
@@ -321,6 +324,7 @@ model PayloadBuild {
 
   @@index([status, createdAt(sort: Desc)])
   @@index([createdBy])
+  @@index([platform])
   @@map("payload_builds")
 }
 
@@ -435,6 +439,11 @@ model HysteriaNode {
   provider        String?
   profileId       String?
   lastHeartbeatAt DateTime?
+  // SSH connection details for browser-based terminal
+  sshPrivateKey   String?   @db.Text // Encrypted SSH private key
+  sshUsername     String?   // SSH username (root, ubuntu, azureuser, etc.)
+  sshPort         Int       @default(22) // SSH port
+  sshConnectedAt  DateTime? // Last successful SSH connection timestamp
   // Proxy configuration for dynamic proxy management
   socksProxyUrl   String?   // SOCKS5 proxy URL (e.g., socks5://127.0.0.1:1080)
   httpProxyUrl    String?   // HTTP/HTTPS proxy URL (e.g., http://127.0.0.1:8080)
@@ -465,6 +474,25 @@ model HysteriaServerConfig {
   updatedAt           DateTime @updatedAt
 
   @@map("server_configs")
+}
+
+model Secret {
+  id          String   @id @default(cuid())
+  name        String
+  type        String   // ssh_key, api_key, token, password, certificate, other
+  provider    String?  // aws, azure, digitalocean, hetzner, vultr, github, etc.
+  value       String   // Encrypted value
+  description String?
+  metadata    Json?    // Additional metadata (key fingerprints, expiry dates, etc.)
+  isActive    Boolean  @default(true)
+  lastUsedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([type])
+  @@index([provider])
+  @@index([isActive])
+  @@map("secrets")
 }
 
 model UsageRecord {
@@ -734,8 +762,30 @@ model EmailLog {
   notificationType String?
   messageId String?
   sentAt    DateTime @default(now())
+  
+  // Deliverability metrics
+  status    String   @default("sent") // sent | delivered | opened | clicked | bounced | complained | spam | failed
+  openedAt  DateTime?
+  clickedAt DateTime?
+  bouncedAt DateTime?
+  bounceReason String?
+  bounceType String? // hard | soft
+  complainedAt DateTime?
+  deliveryDelayMs Int?
+  smtpProvider String?
+  smtpResponse String?
+  isp       String?
+  domain    String?
+  ip        String?
+  
+  // Engagement metrics
+  openCount Int      @default(0)
+  clickCount Int     @default(0)
 
   @@index([to, sentAt])
+  @@index([status])
+  @@index([domain])
+  @@index([isp])
   @@map("email_logs")
 }
 
@@ -781,6 +831,26 @@ model EmailHarvestResult {
   @@index([campaignId])
   @@index([target])
   @@map("email_harvest_results")
+}
+
+model SmtpConfig {
+  id        String   @id @default(cuid())
+  name      String
+  host      String
+  port      Int      @default(587)
+  secure    Boolean  @default(false)
+  username  String?
+  password  String?
+  fromEmail String
+  fromName  String?
+  isDefault Boolean  @default(false)
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isDefault])
+  @@index([enabled])
+  @@map("smtp_configs")
 }
 
 // ---------------------------------------------------------------------------
@@ -1115,4 +1185,65 @@ model BloodHoundEdge {
   @@index([targetId])
   @@index([edgeType])
   @@map("bloodhound_edges")
+}
+
+model Campaign {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  status      String   @default("planning")
+  leadOperatorId String?
+  targetCount Int      @default(0)
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status])
+  @@index([leadOperatorId])
+  @@map("campaigns")
+}
+
+model CampaignAssignment {
+  id          String   @id @default(cuid())
+  campaignId  String
+  operatorId  String
+  role        String   @default("operator")
+  assignedAt  DateTime @default(now())
+
+  @@unique([campaignId, operatorId])
+  @@index([campaignId])
+  @@index([operatorId])
+  @@map("campaign_assignments")
+}
+
+model TrafficStats {
+  id          String   @id @default(cuid())
+  nodeId      String
+  userId      String?
+  bytesIn     BigInt   @default(0)
+  bytesOut    BigInt   @default(0)
+  connections Int      @default(0)
+  recordedAt  DateTime @default(now())
+
+  @@index([nodeId, recordedAt(sort: Desc)])
+  @@index([userId, recordedAt(sort: Desc)])
+  @@index([recordedAt(sort: Desc)])
+  @@map("traffic_stats")
+}
+
+model Report {
+  id          String   @id @default(cuid())
+  campaignId  String?
+  type        String
+  title       String
+  content     String   @db.Text
+  format      String   @default("pdf")
+  generatedBy String
+  createdAt   DateTime @default(now())
+
+  @@index([campaignId])
+  @@index([generatedBy])
+  @@index([type])
+  @@map("reports")
 }

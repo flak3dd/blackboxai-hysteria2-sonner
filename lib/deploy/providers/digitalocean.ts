@@ -1,4 +1,4 @@
-import type { VpsProviderClient, VpsCreateResult, ProviderPreset } from "../types"
+import type { VpsProviderClient, VpsCreateResult, ProviderPreset, VpsInstance } from "../types"
 
 const API = "https://api.digitalocean.com/v2"
 
@@ -35,6 +35,42 @@ export function digitalOceanClient(apiKey: string): VpsProviderClient {
           { id: "s-4vcpu-8gb", label: "Basic 4 vCPU", cpu: 4, ram: "8 GB", disk: "160 GB", price: "$48/mo" },
         ],
       }
+    },
+
+    async listInstances(): Promise<VpsInstance[]> {
+      const res = await fetch(`${API}/droplets`, { headers: headers(apiKey) })
+      if (!res.ok) {
+        const body = await res.text()
+        throw new Error(`DO list instances failed (${res.status}): ${body.slice(0, 300)}`)
+      }
+      const data = (await res.json()) as {
+        droplets: Array<{
+          id: number
+          name: string
+          status: string
+          networks?: {
+            v4?: Array<{ ip_address: string; type: string }>
+            v6?: Array<{ ip_address: string; type: string }>
+          }
+          region: { slug: string }
+          size: { slug: string }
+          created_at: string
+        }>
+      }
+      return data.droplets.map((droplet) => {
+        const pubV4 = droplet.networks?.v4?.find((n) => n.type === "public")
+        const pubV6 = droplet.networks?.v6?.find((n) => n.type === "public")
+        return {
+          id: String(droplet.id),
+          name: droplet.name,
+          status: droplet.status,
+          ipv4: pubV4?.ip_address || null,
+          ipv6: pubV6?.ip_address || null,
+          region: droplet.region.slug,
+          size: droplet.size.slug,
+          createdAt: droplet.created_at,
+        }
+      })
     },
 
     async createServer(opts): Promise<VpsCreateResult> {

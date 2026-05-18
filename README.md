@@ -112,7 +112,7 @@ A Next.js-based administrative panel for managing [Hysteria 2](https://v2.hyster
 
 ### Quick Start (5 minutes)
 
-For the fastest way to get started, see [QUICKSTART.md](./QUICKSTART.md) or run the automated setup script:
+For the fastest way to get started, see [docs/QUICKSTART.md](./docs/QUICKSTART.md) or run the automated setup script:
 
 **Linux/macOS:**
 ```bash
@@ -138,8 +138,8 @@ Open http://localhost:3000/login to sign in with your operator credentials.
 
 ### Documentation
 
-- **[QUICKSTART.md](./QUICKSTART.md)** - Get started in 5 minutes
-- **[INSTALL.md](./INSTALL.md)** - Comprehensive installation guide with Docker deployment, production setup, and troubleshooting
+- **[docs/QUICKSTART.md](./docs/QUICKSTART.md)** - Get started in 5 minutes
+- **[docs/INSTALL.md](./docs/INSTALL.md)** - Comprehensive installation guide with Docker deployment, production setup, and troubleshooting
 
 ## Environment Variables
 
